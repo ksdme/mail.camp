@@ -1,9 +1,8 @@
-package main
+package mail
 
 import (
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/mail"
 
 	"github.com/emersion/go-smtp"
@@ -43,16 +42,8 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 // Handles the DATA command. It will be called to receive the email contents,
 // including the headers, subject, body and inline or file attachments.
 func (s *session) Data(r io.Reader) error {
-	fmt.Println("----- Data")
-	e, _ := mail.ReadMessage(r)
-	fmt.Println(">>>", e.Header.Get("Content-Type"))
-
-	// mime.ParseMediaType()
-	m := multipart.NewReader(r, "")
-	m.NextPart()
-
-	body, _ := io.ReadAll(e.Body)
-	fmt.Println("> Body", string(body))
+	message, _ := mail.ReadMessage(r)
+	fmt.Println(extractPlainText(message))
 	return nil
 }
 

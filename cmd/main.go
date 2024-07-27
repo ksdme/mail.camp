@@ -1,7 +1,21 @@
 package main
 
-import "fmt"
+import (
+	"log"
+	"os"
+
+	"github.com/emersion/go-smtp"
+	"github.com/ksdme/mail/internal/mail"
+)
 
 func main() {
-	fmt.Println("Hello World")
+	s := smtp.NewServer(mail.NewBackend())
+
+	s.Addr = "127.0.0.1:1025"
+	s.Domain = "localhost"
+	s.AllowInsecureAuth = true
+	s.Debug = os.Stdout
+
+	log.Println("Starting SMTP server at", s.Addr)
+	log.Fatal(s.ListenAndServe())
 }
