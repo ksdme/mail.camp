@@ -1,8 +1,8 @@
 package mail
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net/mail"
 
 	"github.com/emersion/go-smtp"
@@ -21,13 +21,18 @@ func (bkd *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 }
 
 // A session on the backend.
-type session struct{}
+type session struct {
+	from    string
+	subject string
+	content string
+}
 
 // Handles the MAIL command. It is typically used to indicate whether
 // the sender address is accepted on this server. The upstream MTA
 // will use it to bounce route the email.
+// TODO: Check a blacklist?
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {
-	// TODO: Check a blacklist?
+	s.from = from
 	return nil
 }
 
@@ -43,7 +48,14 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 // including the headers, subject, body and inline or file attachments.
 func (s *session) Data(r io.Reader) error {
 	message, _ := mail.ReadMessage(r)
-	fmt.Println(extractPlainText(message))
+
+	s.subject = message.Header.Get("Subject")
+	if content, err := extractPlainText(message); err != nil {
+		log.Printf("could not extract text from email: %v", err)
+	} else {
+		s.content = content
+	}
+
 	return nil
 }
 
@@ -55,4 +67,8 @@ func (s *session) Logout() error {
 // Handles the RSET command. It is typically useful for aborting the current
 // mail transaction. This allows the sender to reuse the connection for sending
 // another email.
-func (s *session) Reset() {}
+func (s *session) Reset() {
+	s.from = ""
+	s.subject = ""
+	s.content = ""
+}
