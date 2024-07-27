@@ -1,0 +1,6 @@
+version: "3"
+
+tasks:
+  server:
+    cmds:
+      - go run cmd/main.go
