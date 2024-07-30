@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"io"
+	"log"
 	"log/slog"
 	"net/mail"
 
@@ -48,6 +49,12 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	// TODO: Check if the recipient email address is known.
 	// TODO: Check if they hit a limit, maybe a mailbox count limit?
 	slog.Debug("> RCPT", "to", to)
+
+	mailbox := models.Mailbox{AccountID: 2}
+	if err := s.db.NewSelect().Model(&mailbox).Scan(context.Background()); err != nil {
+		log.Panicf("could not find dev mailbox: %v", err)
+	}
+	s.mailboxes = append(s.mailboxes, mailbox)
 	return nil
 }
 

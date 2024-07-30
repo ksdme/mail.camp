@@ -3,6 +3,7 @@ package backend
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"mime/multipart"
 	"net/mail"
@@ -39,6 +40,7 @@ func extractPlainText(message *mail.Message) (string, error) {
 	resolve = func(r io.Reader, cType string, cDisposition string) error {
 		// Handles the case where the content type is not available.
 		if cType == "" {
+			slog.Debug("no explicit content type found")
 			if value, err := readAll(r); err != nil {
 				return err
 			} else {
@@ -57,9 +59,11 @@ func extractPlainText(message *mail.Message) (string, error) {
 				)
 			}
 			if label == "attachment" {
+				slog.Debug("found an attachment, ignoring")
 				return nil
 			}
 			if _, ok := params["filename"]; ok {
+				slog.Debug("found a filename, assuming attachment, ignoring")
 				return nil
 			}
 		}
@@ -71,6 +75,8 @@ func extractPlainText(message *mail.Message) (string, error) {
 
 		// Handle the nested-ness of the parse.
 		if strings.HasPrefix(mediaType, "multipart/") {
+			slog.Debug("found a multipart message", "type", mediaType)
+
 			boundary, ok := params["boundary"]
 			if !ok {
 				return fmt.Errorf("unknown multipart boundary")
@@ -103,14 +109,17 @@ func extractPlainText(message *mail.Message) (string, error) {
 		switch mediaType {
 		case "":
 		case "text/plain":
+			slog.Debug("found a text/plain part")
 			if value, err := readAll(r); err != nil {
 				return err
 			} else {
+				slog.Debug("")
 				text = value
 				return nil
 			}
 
 		case "text/html":
+			slog.Debug("found a text/html part")
 			if len(html) == 0 {
 				if value, err := readAll(r); err != nil {
 					return err
@@ -119,6 +128,9 @@ func extractPlainText(message *mail.Message) (string, error) {
 					return nil
 				}
 			}
+
+		default:
+			slog.Debug("found an unrecognized part, ignoring", "type", mediaType)
 		}
 
 		return nil
@@ -138,6 +150,7 @@ func extractPlainText(message *mail.Message) (string, error) {
 	}
 
 	if len(html) > 0 {
+		slog.Debug("transforming html to text")
 		value := html2text.HTML2TextWithOptions(
 			html,
 			html2text.WithLinksInnerText(),

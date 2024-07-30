@@ -28,12 +28,22 @@ func main() {
 	must(db.NewCreateTable().Model(&models.Account{}).Exec(ctx))
 	must(db.NewCreateTable().Model(&models.Mailbox{}).Exec(ctx))
 	must(db.NewCreateTable().Model(&models.Mail{}).Exec(ctx))
+	slog.Info("created tables")
 
-	slog.Info("migration complete")
+	if config.DEV_BUILD {
+		account := &models.Account{KeySignature: "dev-signature"}
+		must(db.NewInsert().Model(account).Exec(ctx))
+		slog.Info("created account", "id", account.ID)
+
+		mailbox := &models.Mailbox{Name: "dev-mailbox", AccountID: account.ID}
+		must(db.NewInsert().Model(mailbox).Exec(ctx))
+		slog.Info("created mailbox", "id", mailbox.ID)
+	}
 }
 
-func must(_ sql.Result, err error) {
+func must(result sql.Result, err error) sql.Result {
 	if err != nil {
 		log.Panicf("could not run query: %v", err)
 	}
+	return result
 }
