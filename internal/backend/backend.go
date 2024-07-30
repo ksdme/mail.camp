@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"net/mail"
-	"time"
 
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/models"
@@ -56,10 +55,9 @@ func (s *session) Data(r io.Reader) error {
 	}
 
 	mail := &models.Mail{
-		From:       message.Header.Get("From"),
-		Subject:    message.Header.Get("Subject"),
-		Text:       text,
-		ReceivedAt: time.Now(),
+		From:    message.Header.Get("From"),
+		Subject: message.Header.Get("Subject"),
+		Text:    text,
 	}
 
 	for _, mailbox := range s.mailboxes {

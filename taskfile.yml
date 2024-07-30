@@ -1,6 +1,9 @@
 version: "3"
 
 tasks:
-  server:
+  serve:
     cmds:
-      - go run cmd/main.go
+      - go run cmd/server/main.go
+  migrate:
+    cmds:
+      - go run cmd/migrate/main.go
