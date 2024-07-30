@@ -1,4 +1,4 @@
-package mail
+package backend
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ func extractPlainText(message *mail.Message) (string, error) {
 	var html string
 	var resolve func(io.Reader, string, string) error
 	resolve = func(r io.Reader, cType string, cDisposition string) error {
-		// Handles the content type is not available at all.
+		// Handles the case where the content type is not available.
 		if cType == "" {
 			if value, err := readAll(r); err != nil {
 				return err
@@ -82,7 +82,7 @@ func extractPlainText(message *mail.Message) (string, error) {
 				if err == io.EOF {
 					return nil
 				} else if err != nil {
-					return err
+					continue
 				}
 
 				err = resolve(
@@ -111,7 +111,6 @@ func extractPlainText(message *mail.Message) (string, error) {
 			}
 
 		case "text/html":
-			// Reading this is not a problem becase
 			if len(html) == 0 {
 				if value, err := readAll(r); err != nil {
 					return err

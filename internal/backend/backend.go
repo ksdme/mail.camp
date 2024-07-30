@@ -1,11 +1,14 @@
-package mail
+package backend
 
 import (
 	"io"
 	"log"
 	"net/mail"
+	"time"
 
 	"github.com/emersion/go-smtp"
+	"github.com/ksdme/mail/internal/models"
+	"github.com/pkg/errors"
 )
 
 func NewBackend() *backend {
@@ -16,23 +19,20 @@ func NewBackend() *backend {
 // outgoing messages.
 type backend struct{}
 
-func (bkd *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
+func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 	return &session{}, nil
 }
 
 // A session on the backend.
 type session struct {
-	from    string
-	subject string
-	content string
+	mailboxes []models.Mailbox
 }
 
 // Handles the MAIL command. It is typically used to indicate whether
 // the sender address is accepted on this server. The upstream MTA
 // will use it to bounce route the email.
-// TODO: Check a blacklist?
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {
-	s.from = from
+	// TODO: Check a blacklist?
 	return nil
 }
 
@@ -41,6 +41,7 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 // whether a recipient address is accepted.
 func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	// TODO: Check if the recipient email address is known.
+	// TODO: Check if they hit a limit, maybe a mailbox count limit?
 	return nil
 }
 
@@ -49,11 +50,23 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 func (s *session) Data(r io.Reader) error {
 	message, _ := mail.ReadMessage(r)
 
-	s.subject = message.Header.Get("Subject")
-	if content, err := extractPlainText(message); err != nil {
-		log.Printf("could not extract text from email: %v", err)
-	} else {
-		s.content = content
+	text, err := extractPlainText(message)
+	if err != nil {
+		return errors.Wrap(err, "could not read message")
+	}
+
+	mail := &models.Mail{
+		From:       message.Header.Get("From"),
+		Subject:    message.Header.Get("Subject"),
+		Text:       text,
+		ReceivedAt: time.Now(),
+	}
+
+	for _, mailbox := range s.mailboxes {
+		if err := mailbox.Add(mail); err != nil {
+			// TODO: Add mailbox identity here.
+			log.Printf("could not add email to mailbox %v", err)
+		}
 	}
 
 	return nil
@@ -68,7 +81,6 @@ func (s *session) Logout() error {
 // mail transaction. This allows the sender to reuse the connection for sending
 // another email.
 func (s *session) Reset() {
-	s.from = ""
-	s.subject = ""
-	s.content = ""
+	var mailboxes []models.Mailbox
+	s.mailboxes = mailboxes
 }
