@@ -34,11 +34,14 @@ func main() {
 	slog.Info("created tables")
 
 	if config.DevBuild {
-		account := &models.Account{KeySignature: "dev-signature"}
+		account := &models.Account{
+			MailboxPrefix: sql.NullString{String: "hey", Valid: true},
+			KeySignature:  "dev-signature",
+		}
 		must(db.NewInsert().Model(account).Exec(ctx))
 		slog.Info("created account", "id", account.ID)
 
-		mailbox := &models.Mailbox{Name: "dev-mailbox", AccountID: account.ID}
+		mailbox := &models.Mailbox{Name: "mailbox", AccountID: account.ID}
 		must(db.NewInsert().Model(mailbox).Exec(ctx))
 		slog.Info("created mailbox", "id", mailbox.ID)
 	}

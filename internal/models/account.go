@@ -140,3 +140,37 @@ func (account *Account) CreateWildcardMailbox(ctx context.Context, db *bun.DB, s
 		fmt.Sprintf("%s.%s", account.MailboxPrefix.String, suffix),
 	)
 }
+
+// Finds an existing mailbox with a name or creates one if necessary or possible.
+func GetOrCreateMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox, error) {
+	// Try finding an existing mailbox.
+	mailbox := &Mailbox{}
+	if err := db.NewSelect().Model(mailbox).Where("name = ?", name).Scan(ctx); err != nil {
+		if err != sql.ErrNoRows {
+			return nil, errors.Wrap(err, "could not query mailboxes")
+		}
+	} else {
+		return mailbox, nil
+	}
+
+	// If the name is wildcard compatible, try to issue a mailbox.
+	if strings.Contains(name, ".") {
+		sections := strings.SplitN(name, ".", 2)
+		if len(sections) != 2 {
+			return nil, nil
+		}
+
+		account := &Account{}
+		if err := db.NewSelect().Model(account).Where("mailbox_prefix = ?", sections[0]).Scan((ctx)); err != nil {
+			if err == sql.ErrNoRows {
+				return nil, fmt.Errorf("unknown mailbox prefix")
+			}
+
+			return nil, errors.Wrap(err, "could not query mailboxes for wildcards")
+		}
+
+		return account.CreateWildcardMailbox(ctx, db, sections[1])
+	}
+
+	return nil, fmt.Errorf("could not find or create mailbox")
+}

@@ -2,7 +2,6 @@ package backend
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -72,33 +71,21 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 		return errors.Wrap(err, "could not parse recipient address")
 	}
 
-	domain := fmt.Sprintf("@%s", config.MxHost)
-	if !strings.HasSuffix(recipient.Address, domain) {
+	host := fmt.Sprintf("@%s", config.MxHost)
+	if !strings.HasSuffix(recipient.Address, host) {
 		return fmt.Errorf("unrecognized domain: %v", recipient.Address)
 	}
-
-	// The name of the target mailbox.
 	name := strings.Split(recipient.Address, "@")[0]
-	found := false
-	mailbox := models.Mailbox{}
 
 	// Check if such a mailbox already exists.
-	err = s.db.NewSelect().Model(&mailbox).Where("name = ?", name).Scan(context.Background())
-	if err == nil {
-		found = true
-	} else if err != sql.ErrNoRows {
-		return errors.Wrap(err, "querying for mailboxes failed")
+	mailbox, err := models.GetOrCreateMailbox(context.Background(), s.db, name)
+	if err != nil {
+		return errors.Wrap(err, "could not find a mailbox")
 	}
 
-	// TODO: Create a mailbox if necessary.
-
-	if found {
-		slog.Debug("found matching mailbox", "mailbox", mailbox.ID)
-		s.mailboxes = append(s.mailboxes, mailbox)
-		return nil
-	}
-
-	return fmt.Errorf("could not find a mailbox for %s", to)
+	slog.Debug("found matching mailbox", "mailbox", mailbox.ID)
+	s.mailboxes = append(s.mailboxes, *mailbox)
+	return nil
 }
 
 // Handles the DATA command. It will be called to receive the email contents,
