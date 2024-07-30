@@ -148,7 +148,6 @@ func extractPlainText(message *mail.Message) (string, error) {
 	if len(text) > 0 {
 		return text, nil
 	}
-
 	if len(html) > 0 {
 		slog.Debug("transforming html to text")
 		value := html2text.HTML2TextWithOptions(

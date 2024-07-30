@@ -2,12 +2,15 @@ package backend
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/mail"
+	"strings"
 
 	"github.com/emersion/go-smtp"
+	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
@@ -30,6 +33,7 @@ func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
 // A session on the backend.
 type session struct {
 	db        *bun.DB
+	from      *mail.Address
 	mailboxes []models.Mailbox
 }
 
@@ -39,6 +43,13 @@ type session struct {
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 	// TODO: Check a blacklist?
 	slog.Debug("> MAIL", "from", from)
+
+	address, err := mail.ParseAddress(from)
+	if err != nil {
+		return errors.Wrap(err, "could not parse from address")
+	}
+	s.from = address
+
 	return nil
 }
 
@@ -50,12 +61,39 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	// TODO: Check if they hit a limit, maybe a mailbox count limit?
 	slog.Debug("> RCPT", "to", to)
 
-	mailbox := models.Mailbox{AccountID: 2}
-	if err := s.db.NewSelect().Model(&mailbox).Scan(context.Background()); err != nil {
-		log.Panicf("could not find dev mailbox: %v", err)
+	// Parse and validate the email address at the same time.
+	recipient, err := mail.ParseAddress(to)
+	if err != nil {
+		return errors.Wrap(err, "could not parse recipient address")
 	}
-	s.mailboxes = append(s.mailboxes, mailbox)
-	return nil
+
+	domain := fmt.Sprintf("@%s", config.MX_DOMAIN)
+	if !strings.HasSuffix(recipient.Address, domain) {
+		return fmt.Errorf("unrecognized domain: %v", recipient.Address)
+	}
+
+	// The name of the target mailbox.
+	name := strings.Split(recipient.Address, "@")[0]
+	found := false
+	mailbox := models.Mailbox{}
+
+	// Check if such a mailbox already exists.
+	err = s.db.NewSelect().Model(&mailbox).Where("name = ?", name).Scan(context.Background())
+	if err == nil {
+		found = true
+	} else if err != sql.ErrNoRows {
+		return errors.Wrap(err, "querying for mailboxes failed")
+	}
+
+	// TODO: Create a mailbox if necessary.
+
+	if found {
+		slog.Debug("found matching mailbox", "mailbox", mailbox.ID)
+		s.mailboxes = append(s.mailboxes, mailbox)
+		return nil
+	}
+
+	return fmt.Errorf("could not find a mailbox for %s", to)
 }
 
 // Handles the DATA command. It will be called to receive the email contents,
@@ -68,21 +106,20 @@ func (s *session) Data(r io.Reader) error {
 		return errors.Wrap(err, "could not read message")
 	}
 
-	from := message.Header.Get("From")
-	subject := message.Header.Get("Subject")
 	for _, mailbox := range s.mailboxes {
 		mail := &models.Mail{
-			From:      from,
-			Subject:   subject,
-			Text:      text,
-			MailboxID: mailbox.ID,
+			FromAddress: s.from.Address,
+			FromName:    s.from.Name,
+			Subject:     message.Header.Get("Subject"),
+			Text:        text,
+			MailboxID:   mailbox.ID,
 		}
 
 		_, err := s.db.NewInsert().Model(mail).Exec(context.Background())
 		if err != nil {
-			slog.Info("could not add mail to mailbox", "from", from, "mailbox", mailbox.ID, "err", err)
+			slog.Info("could not add mail to mailbox", "from", s.from.Address, "mailbox", mailbox.ID, "err", err)
 		} else {
-			slog.Debug("added mail to mailbox", "from", from, "mailbox", mailbox.ID)
+			slog.Debug("added mail to mailbox", "from", s.from.Address, "mailbox", mailbox.ID)
 		}
 	}
 
@@ -100,4 +137,5 @@ func (s *session) Logout() error {
 func (s *session) Reset() {
 	var mailboxes []models.Mailbox
 	s.mailboxes = mailboxes
+	s.from = nil
 }
