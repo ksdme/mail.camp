@@ -1,29 +1,34 @@
 package backend
 
 import (
+	"context"
 	"io"
-	"log"
+	"log/slog"
 	"net/mail"
 
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/pkg/errors"
+	"github.com/uptrace/bun"
 )
 
-func NewBackend() *backend {
-	return &backend{}
+func NewBackend(db *bun.DB) *backend {
+	return &backend{db}
 }
 
 // The SMTP server backend. At the moment, it does not support
 // outgoing messages.
-type backend struct{}
+type backend struct {
+	db *bun.DB
+}
 
 func (b *backend) NewSession(c *smtp.Conn) (smtp.Session, error) {
-	return &session{}, nil
+	return &session{db: b.db}, nil
 }
 
 // A session on the backend.
 type session struct {
+	db        *bun.DB
 	mailboxes []models.Mailbox
 }
 
@@ -32,6 +37,7 @@ type session struct {
 // will use it to bounce route the email.
 func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 	// TODO: Check a blacklist?
+	slog.Debug("> MAIL", "from", from)
 	return nil
 }
 
@@ -41,6 +47,7 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 	// TODO: Check if the recipient email address is known.
 	// TODO: Check if they hit a limit, maybe a mailbox count limit?
+	slog.Debug("> RCPT", "to", to)
 	return nil
 }
 
@@ -54,16 +61,21 @@ func (s *session) Data(r io.Reader) error {
 		return errors.Wrap(err, "could not read message")
 	}
 
-	mail := &models.Mail{
-		From:    message.Header.Get("From"),
-		Subject: message.Header.Get("Subject"),
-		Text:    text,
-	}
-
+	from := message.Header.Get("From")
+	subject := message.Header.Get("Subject")
 	for _, mailbox := range s.mailboxes {
-		if err := mailbox.Add(mail); err != nil {
-			// TODO: Add mailbox identity here.
-			log.Printf("could not add email to mailbox %v", err)
+		mail := &models.Mail{
+			From:      from,
+			Subject:   subject,
+			Text:      text,
+			MailboxID: mailbox.ID,
+		}
+
+		_, err := s.db.NewInsert().Model(mail).Exec(context.Background())
+		if err != nil {
+			slog.Info("could not add mail to mailbox", "from", from, "mailbox", mailbox.ID, "err", err)
+		} else {
+			slog.Debug("added mail to mailbox", "from", from, "mailbox", mailbox.ID)
 		}
 	}
 

@@ -1,5 +1,6 @@
 package config
 
 const (
-	DB_URI = "file:db.sqlite3"
+	DEV_BUILD = true
+	DB_URI    = "file:db.sqlite3"
 )

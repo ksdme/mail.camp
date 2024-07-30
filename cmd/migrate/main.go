@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"log/slog"
 
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
@@ -28,7 +29,7 @@ func main() {
 	must(db.NewCreateTable().Model(&models.Mailbox{}).Exec(ctx))
 	must(db.NewCreateTable().Model(&models.Mail{}).Exec(ctx))
 
-	log.Println("migration complete")
+	slog.Info("migration complete")
 }
 
 func must(_ sql.Result, err error) {

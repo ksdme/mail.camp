@@ -8,9 +8,3 @@ type Mailbox struct {
 	AccountID int64    `bun:",notnull"`
 	Account   *Account `bun:"rel:belongs-to,join:account_id=id"`
 }
-
-// Add an email to the mailbox.
-// TODO: Add
-func (m *Mailbox) Add(mail *Mail) error {
-	return nil
-}
