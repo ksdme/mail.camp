@@ -50,6 +50,11 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 	}
 	s.from = address
 
+	host := strings.Split(address.Address, "@")[1]
+	if host == config.MxHost {
+		return fmt.Errorf("outgoing email not supported")
+	}
+
 	return nil
 }
 
@@ -67,7 +72,7 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 		return errors.Wrap(err, "could not parse recipient address")
 	}
 
-	domain := fmt.Sprintf("@%s", config.MX_DOMAIN)
+	domain := fmt.Sprintf("@%s", config.MxHost)
 	if !strings.HasSuffix(recipient.Address, domain) {
 		return fmt.Errorf("unrecognized domain: %v", recipient.Address)
 	}
@@ -98,6 +103,7 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 
 // Handles the DATA command. It will be called to receive the email contents,
 // including the headers, subject, body and inline or file attachments.
+// TODO: Check DKIM signature.
 func (s *session) Data(r io.Reader) error {
 	message, _ := mail.ReadMessage(r)
 

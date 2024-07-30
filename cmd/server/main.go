@@ -14,11 +14,11 @@ import (
 )
 
 func main() {
-	if config.DEV_BUILD {
+	if config.DevBuild {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	sqldb, err := sql.Open("sqlite3", config.DB_URI)
+	sqldb, err := sql.Open("sqlite3", config.DbURI)
 	if err != nil {
 		log.Panicf("opening db failed: %v", err)
 	}

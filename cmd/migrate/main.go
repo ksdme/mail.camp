@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	sqldb, err := sql.Open("sqlite3", config.DB_URI)
+	sqldb, err := sql.Open("sqlite3", config.DbURI)
 	if err != nil {
 		log.Panicf("opening db failed: %v", err)
 	}
@@ -33,7 +33,7 @@ func main() {
 	must(db.NewCreateTable().Model(&models.Mail{}).Exec(ctx))
 	slog.Info("created tables")
 
-	if config.DEV_BUILD {
+	if config.DevBuild {
 		account := &models.Account{KeySignature: "dev-signature"}
 		must(db.NewInsert().Model(account).Exec(ctx))
 		slog.Info("created account", "id", account.ID)

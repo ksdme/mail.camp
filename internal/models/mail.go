@@ -8,6 +8,8 @@ type Mail struct {
 	Subject     string
 	Text        string
 
+	Important bool
+
 	MailboxID int64    `bun:",notnull"`
 	Mailbox   *Mailbox `bun:"rel:belongs-to,join:mailbox_id=id"`
 }
