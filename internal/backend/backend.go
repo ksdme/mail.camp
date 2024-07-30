@@ -110,9 +110,18 @@ func (s *session) Data(r io.Reader) error {
 
 		_, err := s.db.NewInsert().Model(mail).Exec(context.Background())
 		if err != nil {
-			slog.Info("could not add mail to mailbox", "from", s.from.Address, "mailbox", mailbox.ID, "err", err)
+			slog.Info(
+				"could not add mail to mailbox",
+				"from", s.from.Address,
+				"mailbox", mailbox.ID,
+				"err", err,
+			)
 		} else {
-			slog.Debug("added mail to mailbox", "from", s.from.Address, "mailbox", mailbox.ID)
+			slog.Debug(
+				"added mail to mailbox",
+				"from", s.from.Address,
+				"mailbox", mailbox.ID,
+			)
 		}
 	}
 
