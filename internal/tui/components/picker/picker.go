@@ -136,7 +136,11 @@ func (m Model) View() string {
 		if item.Value == m.selected {
 			line = m.Styles.Selected.Render(label)
 		} else if item.Value == m.highlighted {
-			line = m.Styles.Highlighted.Render(label)
+			if m.IsFocused() {
+				line = m.Styles.Highlighted.Render(label)
+			} else {
+				line = m.Styles.HighlightedBlur.Render(label)
+			}
 		} else {
 			line = m.Styles.Regular.Render(label)
 		}
@@ -159,20 +163,22 @@ func (m Model) View() string {
 }
 
 type Styles struct {
-	Title       lipgloss.Style
-	Badge       lipgloss.Style
-	Regular     lipgloss.Style
-	Selected    lipgloss.Style
-	Highlighted lipgloss.Style
+	Title           lipgloss.Style
+	Badge           lipgloss.Style
+	Regular         lipgloss.Style
+	Selected        lipgloss.Style
+	Highlighted     lipgloss.Style
+	HighlightedBlur lipgloss.Style
 }
 
 func DefaultStyles() Styles {
 	return Styles{
-		Title:       lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
-		Badge:       lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
-		Regular:     lipgloss.NewStyle(),
-		Selected:    lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
-		Highlighted: lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
+		Title:           lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
+		Badge:           lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
+		Regular:         lipgloss.NewStyle(),
+		Selected:        lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
+		Highlighted:     lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
+		HighlightedBlur: lipgloss.NewStyle(),
 	}
 }
 
