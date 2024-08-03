@@ -1,21 +1,23 @@
 package picker
 
 import (
-	"fmt"
-	"slices"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Represents the message passed when an item from the list is
+// selected.
+type SelectedMsg struct {
+	Item Item
+}
+
 // A picker is a component that can be used to show a list of
 // values and have the user pick from them.
 type Model struct {
 	title string
-	items []PickerItem
+	items []Item
 
-	// Tracks the cursor and selected values.
 	selected    int
 	highlighted int
 	focused     bool
@@ -26,13 +28,14 @@ type Model struct {
 	KeyMap KeyMap
 }
 
-func NewModel(title string, items []PickerItem, selected int, width int, height int) Model {
+func NewModel(title string, items []Item, width int, height int) Model {
 	return Model{
 		title: title,
 		items: items,
 
-		focused:  false,
-		selected: selected,
+		focused:     false,
+		selected:    0,
+		highlighted: 0,
 
 		Width:  width,
 		Height: height,
@@ -54,8 +57,32 @@ func (m Model) IsFocused() bool {
 	return m.focused
 }
 
+func (m *Model) SetItems(items []Item) {
+	m.items = items
+	m.selected = 0
+	m.highlighted = 0
+}
+
 func (m Model) HasItems() bool {
 	return len(m.items) > 0
+}
+
+func (m Model) Selected() tea.Msg {
+	return SelectedMsg{
+		Item: m.items[m.selected],
+	}
+}
+
+func (m Model) clampedIndex(index int) int {
+	if index < 0 {
+		return 0
+	}
+
+	if index >= len(m.items) {
+		return len(m.items) - 1
+	}
+
+	return index
 }
 
 func (m Model) Init() tea.Cmd {
@@ -65,32 +92,24 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, m.KeyMap.GoToTop):
-			if m.HasItems() {
-				m.highlighted = m.items[0].Value
+		if m.IsFocused() && m.HasItems() {
+			switch {
+			case key.Matches(msg, m.KeyMap.GoToTop):
+				m.highlighted = 0
+
+			case key.Matches(msg, m.KeyMap.GoToLast):
+				m.highlighted = len(m.items) - 1
+
+			case key.Matches(msg, m.KeyMap.Up):
+				m.highlighted = m.clampedIndex(m.highlighted - 1)
+
+			case key.Matches(msg, m.KeyMap.Down):
+				m.highlighted = m.clampedIndex(m.highlighted + 1)
+
+			case key.Matches(msg, m.KeyMap.Select):
+				m.selected = m.highlighted
+				return m, m.Selected
 			}
-		case key.Matches(msg, m.KeyMap.GoToLast):
-			if m.HasItems() {
-				m.highlighted = m.items[len(m.items)-1].Value
-			}
-		case key.Matches(msg, m.KeyMap.Up):
-			if m.HasItems() {
-				index := slices.IndexFunc(m.items, func(item PickerItem) bool {
-					return item.Value == m.highlighted
-				})
-				m.highlighted = m.items[max(index-1, 0)].Value
-			}
-		case key.Matches(msg, m.KeyMap.Down):
-			if m.HasItems() {
-				index := slices.IndexFunc(m.items, func(item PickerItem) bool {
-					return item.Value == m.highlighted
-				})
-				m.highlighted = m.items[min(index+1, len(m.items)-1)].Value
-			}
-		case key.Matches(msg, m.KeyMap.Select):
-			// TODO: We should push an command.
-			m.selected = m.highlighted
 		}
 	}
 
@@ -109,41 +128,53 @@ func (m Model) View() string {
 	}
 
 	// Keep the highlighted line visible.
-	var items []PickerItem
-	location := slices.IndexFunc(m.items, func(item PickerItem) bool {
-		return item.Value == m.highlighted
-	})
-	if location > height-1 {
-		items = m.items[location-height+1 : location+1]
+	var items []Item
+	if m.highlighted > height-1 {
+		items = m.items[m.highlighted-height+1 : m.highlighted+1]
 	} else {
-		items = m.items[:height]
+		if len(m.items) > height {
+			items = m.items[:height]
+		} else {
+			items = m.items
+		}
 	}
 
-	for _, item := range items {
+	for index, item := range items {
 		legend := " "
-		if item.Value == m.selected {
-			legend = "┃"
+		if index == m.selected {
+			legend = m.Styles.SelectedLegend.Render("┃")
 		}
-		label := fmt.Sprintf("%s %s", legend, item.Label)
 
 		// If the text overflows, trim it, add ellipsis.
-		total := len(label) + len(item.Badge)
+		label := item.Label
+		total := len(label) + len(item.Badge) + 2
 		if total > m.Width {
+			// TODO: Trim from the badge too?
 			label = label[:m.Width-total-6] + "..."
 		}
 
-		line := ""
-		if item.Value == m.selected {
-			line = m.Styles.Selected.Render(label)
-		} else if item.Value == m.highlighted {
+		if index == m.highlighted {
 			if m.IsFocused() {
-				line = m.Styles.Highlighted.Render(label)
+				label = m.Styles.Highlighted.Render(label)
 			} else {
-				line = m.Styles.HighlightedBlur.Render(label)
+				if index == m.selected {
+					label = m.Styles.SelectedLabel.Render(label)
+				} else {
+					label = m.Styles.Regular.Render(label)
+				}
 			}
+		} else if index == m.selected {
+			label = m.Styles.SelectedLabel.Render(label)
 		} else {
-			line = m.Styles.Regular.Render(label)
+			label = m.Styles.Regular.Render(label)
 		}
+
+		line := lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			legend,
+			lipgloss.NewStyle().Render(" "),
+			label,
+		)
 
 		if len(item.Badge) != 0 {
 			badge := m.Styles.Badge.Render(item.Badge)
@@ -163,22 +194,22 @@ func (m Model) View() string {
 }
 
 type Styles struct {
-	Title           lipgloss.Style
-	Badge           lipgloss.Style
-	Regular         lipgloss.Style
-	Selected        lipgloss.Style
-	Highlighted     lipgloss.Style
-	HighlightedBlur lipgloss.Style
+	Title          lipgloss.Style
+	Badge          lipgloss.Style
+	Regular        lipgloss.Style
+	SelectedLabel  lipgloss.Style
+	SelectedLegend lipgloss.Style
+	Highlighted    lipgloss.Style
 }
 
 func DefaultStyles() Styles {
 	return Styles{
-		Title:           lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
-		Badge:           lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
-		Regular:         lipgloss.NewStyle(),
-		Selected:        lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
-		Highlighted:     lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
-		HighlightedBlur: lipgloss.NewStyle(),
+		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
+		Badge:          lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
+		Regular:        lipgloss.NewStyle(),
+		SelectedLabel:  lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
+		SelectedLegend: lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
+		Highlighted:    lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
 	}
 }
 
@@ -216,12 +247,12 @@ func DefaultKeyMap() KeyMap {
 }
 
 // Represents an item in the picker list.
-type PickerItem struct {
+type Item struct {
 	Label string
 	Value int
 	Badge string
 }
 
-func (item *PickerItem) FilterValue() string {
+func (item *Item) FilterValue() string {
 	return item.Label
 }
