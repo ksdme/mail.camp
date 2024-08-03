@@ -41,8 +41,7 @@ type Account struct {
 }
 
 func (account *Account) createMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox, error) {
-	name = strings.ToLower(name)
-	name = strings.TrimSpace(name)
+	name = normalizeMailbox(name)
 	if len(name) <= 2 {
 		return nil, errors.Wrap(
 			ErrInvalidMailbox,
@@ -112,6 +111,7 @@ func (account *Account) CreateRandomMailbox(ctx context.Context, db *bun.DB) (*M
 		for len(name) < randomMailboxNameMinSize {
 			index := rand.Intn(len(wordlist.Words))
 			name += wordlist.Words[index]
+			name = normalizeMailbox(name)
 		}
 
 		if exists, err := db.NewSelect().Where("name = ?", name).Exists(ctx); err != nil {
@@ -143,6 +143,8 @@ func (account *Account) CreateWildcardMailbox(ctx context.Context, db *bun.DB, s
 
 // Finds an existing mailbox with a name or creates one if necessary or possible.
 func GetOrCreateMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox, error) {
+	name = normalizeMailbox(name)
+
 	// Try finding an existing mailbox.
 	mailbox := &Mailbox{}
 	if err := db.NewSelect().Model(mailbox).Where("name = ?", name).Scan(ctx); err != nil {
@@ -156,9 +158,6 @@ func GetOrCreateMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox,
 	// If the name is wildcard compatible, try to issue a mailbox.
 	if strings.Contains(name, ".") {
 		sections := strings.SplitN(name, ".", 2)
-		if len(sections) != 2 {
-			return nil, nil
-		}
 
 		account := &Account{}
 		if err := db.NewSelect().Model(account).Where("mailbox_prefix = ?", sections[0]).Scan((ctx)); err != nil {
@@ -173,4 +172,10 @@ func GetOrCreateMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox,
 	}
 
 	return nil, fmt.Errorf("could not find or create mailbox")
+}
+
+func normalizeMailbox(name string) string {
+	name = strings.TrimSpace(name)
+	name = strings.ToLower(name)
+	return name
 }
