@@ -130,7 +130,7 @@ func CreateRandomMailbox(ctx context.Context, db *bun.DB, account Account) (*Mai
 
 // Generate a mailbox based on the configured prefix on the account.
 func CreateWildcardMailbox(ctx context.Context, db *bun.DB, account Account, suffix string) (*Mailbox, error) {
-	if !account.MailboxPrefix.Valid {
+	if !account.ReservedPrefix.Valid {
 		return nil, fmt.Errorf("no mailbox prefix configured for the account")
 	}
 
@@ -142,7 +142,7 @@ func CreateWildcardMailbox(ctx context.Context, db *bun.DB, account Account, suf
 		ctx,
 		db,
 		account,
-		fmt.Sprintf("%s.%s", account.MailboxPrefix.String, suffix),
+		fmt.Sprintf("%s.%s", account.ReservedPrefix.String, suffix),
 	)
 }
 
