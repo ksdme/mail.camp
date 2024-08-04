@@ -49,6 +49,8 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -63,10 +65,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		}
+
+	case home.MailboxSelectedMsg:
+		return m, m.loadMails(msg.MailboxID)
+
+	case home.MailboxesUpdateMsg:
+		m.home, cmd = m.home.Update(msg)
+		return m, cmd
 	}
 
 	if m.mode == Home {
-		var cmd tea.Cmd
 		m.home, cmd = m.home.Update(msg)
 		return m, cmd
 	}
@@ -117,4 +125,18 @@ func (m Model) loadMailboxes() tea.Msg {
 	slog.Debug("mailboxes", "count", len(mailboxes))
 
 	return home.MailboxesUpdateMsg{Mailboxes: mailboxes, Err: err}
+}
+
+func (m Model) loadMails(mailbox int) tea.Cmd {
+	return func() tea.Msg {
+		var mails []models.Mail
+
+		// TODO: The context should be bound to the ssh connection.
+		err := m.db.NewSelect().
+			Model(&mails).
+			Where("mailbox_id = ?", mailbox).
+			Scan(context.Background())
+
+		return home.MailsUpdateMsg{Mails: mails, Err: err}
+	}
 }

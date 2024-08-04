@@ -17,6 +17,15 @@ type MailboxesUpdateMsg struct {
 	Err       error
 }
 
+type MailsUpdateMsg struct {
+	Mails []models.Mail
+	Err   error
+}
+
+type MailboxSelectedMsg struct {
+	MailboxID int
+}
+
 type Model struct {
 	mailboxes picker.Model
 	mails     table.Model
@@ -40,7 +49,7 @@ func NewModel() Model {
 
 	// Setup the mails table.
 	styles := table.DefaultStyles()
-	styles.Header = mailboxes.Styles.Title
+	styles.Header = mailboxes.Styles.Title.PaddingLeft(1)
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(initialWidth*2/3)),
 		table.WithHeight(initialHeight),
@@ -48,7 +57,7 @@ func NewModel() Model {
 		table.WithStyles(styles),
 		table.WithStyleFunc(func(row int) lipgloss.Style {
 			if row > 6 {
-				return mailboxes.Styles.SelectedLabel
+				return mailboxes.Styles.SelectedLegend
 			}
 			return styles.Cell
 		}),
@@ -67,7 +76,7 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		gap := 3
+		gap := 6
 
 		m.mailboxes.Width = m.Width / 3
 		m.mailboxes.Height = m.Height
@@ -78,13 +87,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "right", "l":
-			m.mailboxes.Blur()
-			m.mails.Focus()
-
 		case "left", "h":
 			m.mailboxes.Focus()
 			m.mails.Blur()
+
+		case "right", "l":
+			if m.mails.HasRows() {
+				m.mailboxes.Blur()
+				m.mails.Focus()
+			}
 		}
 
 	case MailboxesUpdateMsg:
@@ -94,11 +105,40 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			items = append(items, picker.Item{
 				Label: mailbox.Email(),
 				Value: int(mailbox.ID),
+				Badge: "2",
 			})
 		}
 		m.mailboxes.SetItems(items)
-		// TODO: Raise a load mails command
+
+		// Trigger mails load.
+		m.mails.SetRows([]table.Row{})
+		return m, m.mailboxSelected
+
+	case MailsUpdateMsg:
+		// TODO: Retain selection if the same mailbox is updated.
+		// TODO: Handle error.
+		var items []table.Row
+		for _, mail := range msg.Mails {
+			items = append(items, table.Row{
+				mail.Subject,
+				mail.FromAddress,
+				"8 mins ago",
+			})
+		}
+		m.mails.SetRows(items)
+
+		// If the update caused there to be no mails.
+		if !m.mails.HasRows() {
+			m.mails.Blur()
+			m.mailboxes.Focus()
+		}
 		return m, nil
+
+	case picker.SelectedMsg:
+		m.mails.SetRows([]table.Row{})
+		m.mailboxes.Blur()
+		m.mails.Focus()
+		return m, m.mailboxSelected
 	}
 
 	var cmd tea.Cmd
@@ -120,11 +160,11 @@ func (m Model) View() string {
 	}
 
 	mailboxes := lipgloss.NewStyle().
-		PaddingRight(3).
+		PaddingRight(6).
 		Render(m.mailboxes.View())
 
 	var mails string
-	if len(mails) == 0 {
+	if !m.mails.HasRows() {
 		mails = lipgloss.JoinVertical(
 			lipgloss.Top,
 			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
@@ -142,6 +182,15 @@ func (m Model) View() string {
 		mailboxes,
 		mails,
 	)
+}
+
+func (m Model) mailboxSelected() tea.Msg {
+	if m.mailboxes.HasItems() {
+		selection := m.mailboxes.SelectedItem()
+		return MailboxSelectedMsg{MailboxID: selection.Value}
+	}
+
+	return nil
 }
 
 type KeyMap struct {
