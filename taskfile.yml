@@ -7,3 +7,6 @@ tasks:
   migrate:
     cmds:
       - go run cmd/migrate/main.go
+  tea:
+    cmds:
+      - go run cmd/tui/main.go
