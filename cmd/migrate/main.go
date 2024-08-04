@@ -35,8 +35,8 @@ func main() {
 
 	if config.DevBuild {
 		account := &models.Account{
-			MailboxPrefix: sql.NullString{String: "hey", Valid: true},
-			KeySignature:  "dev-signature",
+			ReservedPrefix: sql.NullString{String: "hey", Valid: true},
+			KeySignature:   "dev-signature",
 		}
 		must(db.NewInsert().Model(account).Exec(ctx))
 		slog.Info("created account", "id", account.ID)

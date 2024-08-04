@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/utils"
 	"github.com/ksdme/mail/internal/wordlist"
 	"github.com/pkg/errors"
@@ -41,6 +42,10 @@ type Mailbox struct {
 	// TODO: We need to setup cascade relationship.
 	AccountID int64    `bun:",notnull"`
 	Account   *Account `bun:"rel:belongs-to,join:account_id=id"`
+}
+
+func (m Mailbox) Email() string {
+	return fmt.Sprintf("%s@%s", m.Name, config.MxHost)
 }
 
 func createMailbox(ctx context.Context, db *bun.DB, account Account, name string) (*Mailbox, error) {
