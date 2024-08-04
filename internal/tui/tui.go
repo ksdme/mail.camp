@@ -1,9 +1,14 @@
 package tui
 
 import (
+	"context"
+	"log/slog"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui/home"
+	"github.com/uptrace/bun"
 )
 
 type mode int
@@ -14,6 +19,9 @@ const (
 
 // Represents the top most model.
 type Model struct {
+	db      *bun.DB
+	account models.Account
+
 	mode mode
 	home home.Model
 
@@ -23,15 +31,21 @@ type Model struct {
 	quitting bool
 }
 
-func NewModel() Model {
+func NewModel(db *bun.DB, account models.Account) Model {
 	return Model{
+		db:      db,
+		account: account,
+
 		mode: Home,
 		home: home.NewModel(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		m.home.Init(),
+		m.loadMailboxes,
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -40,8 +54,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		m.home.Width = m.width
-		m.home.Height = m.height - 5
+		m.home.Width = m.width - 12
+		m.home.Height = m.height - 6
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -76,13 +90,13 @@ func (m Model) View() string {
 		NewStyle().
 		Width(m.width).
 		Align(lipgloss.Center).
-		PaddingBottom(1).
+		PaddingBottom(2).
 		Foreground(lipgloss.Color("244")).
 		Render("mail.ssh.camp")
 
 	return lipgloss.
 		NewStyle().
-		Padding(2, 4).
+		Padding(2, 6).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
@@ -90,4 +104,17 @@ func (m Model) View() string {
 				view,
 			),
 		)
+}
+
+func (m Model) loadMailboxes() tea.Msg {
+	var mailboxes []models.Mailbox
+
+	// TODO: The context should be bound to the ssh connection.
+	err := m.db.NewSelect().
+		Model(&mailboxes).
+		Where("account_id = ?", m.account.ID).
+		Scan(context.Background())
+	slog.Debug("mailboxes", "count", len(mailboxes))
+
+	return home.MailboxesUpdateMsg{Mailboxes: mailboxes, Err: err}
 }

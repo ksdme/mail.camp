@@ -1,12 +1,21 @@
 package home
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui/components/picker"
 	"github.com/ksdme/mail/internal/tui/components/table"
+	"github.com/ksdme/mail/internal/utils"
 )
+
+type MailboxesUpdateMsg struct {
+	Mailboxes []models.Mailbox
+	Err       error
+}
 
 type Model struct {
 	mailboxes picker.Model
@@ -23,28 +32,19 @@ func NewModel() Model {
 	// Setup the mails picker.
 	mailboxes := picker.NewModel(
 		"Mailboxes",
-		[]picker.Item{
-			{Label: "kilariteja@mail.ssh.camp", Value: 1, Badge: "2"},
-			{Label: "thebigapplething@mail.ssh.camp", Value: 1},
-		},
-		initialWidth/4,
+		[]picker.Item{},
+		initialWidth/3,
 		initialHeight,
 	)
 	mailboxes.Focus()
 
 	// Setup the mails table.
-	rows := []table.Row{
-		{"Verify your LinkedIn", "no-reply@linkedin.com", "2 mins ago"},
-		{"Verify your LinkedIn", "no-reply@linkedin.com", "2 mins ago"},
-	}
-
 	styles := table.DefaultStyles()
 	styles.Header = mailboxes.Styles.Title
-
 	table := table.New(
-		table.WithColumns(makeMailTableColumns(initialWidth*3/4)),
+		table.WithColumns(makeMailTableColumns(initialWidth*2/3)),
 		table.WithHeight(initialHeight),
-		table.WithRows(rows),
+		table.WithRows([]table.Row{}),
 		table.WithStyles(styles),
 		table.WithStyleFunc(func(row int) lipgloss.Style {
 			if row > 6 {
@@ -69,7 +69,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		gap := 3
 
-		m.mailboxes.Width = m.Width / 4
+		m.mailboxes.Width = m.Width / 3
 		m.mailboxes.Height = m.Height
 
 		m.mails.SetWidth(m.Width - m.mailboxes.Width - gap)
@@ -86,6 +86,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.mailboxes.Focus()
 			m.mails.Blur()
 		}
+
+	case MailboxesUpdateMsg:
+		// TODO: Handle error.
+		var items []picker.Item
+		for _, mailbox := range msg.Mailboxes {
+			items = append(items, picker.Item{
+				Label: mailbox.Email(),
+				Value: int(mailbox.ID),
+			})
+		}
+		m.mailboxes.SetItems(items)
+		// TODO: Raise a load mails command
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -99,14 +112,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if !m.mailboxes.HasItems() {
+		return utils.
+			Box(m.Width, m.Height, true, true).
+			Foreground(lipgloss.Color("244")).
+			Render("no mailboxes :(")
+	}
+
 	mailboxes := lipgloss.NewStyle().
 		PaddingRight(3).
 		Render(m.mailboxes.View())
 
+	var mails string
+	if len(mails) == 0 {
+		mails = lipgloss.JoinVertical(
+			lipgloss.Top,
+			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
+			utils.
+				Box(m.mails.Width(), m.mails.Height(), false, false).
+				Foreground(lipgloss.Color("244")).
+				Render(fmt.Sprintf("no mails in %s, incoming mails are only stored for 48h", "mailbox@localhost")),
+		)
+	} else {
+		mails = m.mails.View()
+	}
+
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		mailboxes,
-		m.mails.View(),
+		mails,
 	)
 }
 
