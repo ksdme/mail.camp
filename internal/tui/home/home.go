@@ -67,7 +67,7 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		gap := 2
+		gap := 3
 
 		m.mailboxes.Width = m.Width / 4
 		m.mailboxes.Height = m.Height
@@ -100,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	mailboxes := lipgloss.NewStyle().
-		PaddingRight(2).
+		PaddingRight(3).
 		Render(m.mailboxes.View())
 
 	return lipgloss.JoinHorizontal(
