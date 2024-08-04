@@ -73,6 +73,10 @@ func (m Model) Selected() tea.Msg {
 	}
 }
 
+func (m Model) SelectedItem() Item {
+	return m.items[m.selected]
+}
+
 func (m Model) clampedIndex(index int) int {
 	if index < 0 {
 		return 0
@@ -183,7 +187,7 @@ func (m Model) View() string {
 			line = lipgloss.JoinHorizontal(
 				lipgloss.Bottom,
 				line,
-				lipgloss.NewStyle().PaddingRight(space).Render(" "),
+				lipgloss.NewStyle().Width(space).Render(),
 				badge,
 			)
 		}
