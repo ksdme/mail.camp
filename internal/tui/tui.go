@@ -82,7 +82,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case home.MailboxSelectedMsg:
-		return m, m.loadMails(msg.MailboxID)
+		return m, m.loadMails(msg.Mailbox)
 
 	case email.MailSelectedMsg:
 		m.mode = Email
@@ -151,14 +151,14 @@ func (m Model) loadMailboxes() tea.Msg {
 	return home.MailboxesUpdateMsg{Mailboxes: mailboxes, Err: err}
 }
 
-func (m Model) loadMails(mailbox int) tea.Cmd {
+func (m Model) loadMails(mailbox models.Mailbox) tea.Cmd {
 	return func() tea.Msg {
 		var mails []models.Mail
 
 		// TODO: The context should be bound to the ssh connection.
 		err := m.db.NewSelect().
 			Model(&mails).
-			Where("mailbox_id = ?", mailbox).
+			Where("mailbox_id = ?", mailbox.ID).
 			Scan(context.Background())
 
 		return home.MailsUpdateMsg{

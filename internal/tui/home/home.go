@@ -19,23 +19,23 @@ type MailboxesUpdateMsg struct {
 }
 
 type MailsUpdateMsg struct {
-	Mailbox int
+	Mailbox models.Mailbox
 	Mails   []models.Mail
 	Err     error
 }
 
 type MailboxSelectedMsg struct {
-	MailboxID int
+	Mailbox models.Mailbox
 }
 
 type Model struct {
-	selected int
-
 	mailboxes picker.Model
 	mails     table.Model
 
 	Width  int
 	Height int
+
+	SelectedMailbox models.Mailbox
 }
 
 func NewModel() Model {
@@ -103,12 +103,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case "enter":
 			if m.mails.Focused() {
-				return m, m.mailSelected
+				if row, err := m.mails.SelectedRow(); err == nil {
+					mail := row.Value.(models.Mail)
+					return m, m.mailSelected(m.SelectedMailbox, mail)
+				}
 			}
 		}
 
 	case picker.SelectedMsg:
-		m.selected = msg.Item.Value
+		m.SelectedMailbox = msg.Item.Value.(models.Mailbox)
 
 		m.mails.SetRows([]table.Row{})
 		m.mailboxes.Blur()
@@ -122,7 +125,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		for _, mailbox := range msg.Mailboxes {
 			items = append(items, picker.Item{
 				Label: mailbox.Email(),
-				Value: int(mailbox.ID),
+				Value: mailbox,
 				Badge: "2",
 			})
 		}
@@ -131,16 +134,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// Trigger mails load.
 		m.mails.SetRows([]table.Row{})
 		if m.mailboxes.HasItems() {
-			m.selected = m.mailboxes.SelectedItem().Value
-			return m, m.mailboxSelected
-		} else {
-			return m, nil
+			if item, err := m.mailboxes.SelectedItem(); err == nil {
+				m.SelectedMailbox = item.Value.(models.Mailbox)
+				return m, m.mailboxSelected
+			}
 		}
+		return m, nil
 
 	case MailsUpdateMsg:
 		// TODO: Retain selection if the same mailbox is updated.
 		// TODO: Handle error.
-		if msg.Mailbox == m.selected {
+		if msg.Mailbox.ID == m.SelectedMailbox.ID {
 			var items []table.Row
 			for _, mail := range msg.Mails {
 				items = append(items, table.Row{
@@ -209,16 +213,13 @@ func (m Model) View() string {
 }
 
 func (m Model) mailboxSelected() tea.Msg {
-	return MailboxSelectedMsg{MailboxID: m.selected}
+	return MailboxSelectedMsg{Mailbox: m.SelectedMailbox}
 }
 
-func (m Model) mailSelected() tea.Msg {
-	if row, err := m.mails.SelectedRow(); err == nil {
-		if mail, ok := row.Value.(models.Mail); ok {
-			return email.MailSelectedMsg{Mail: mail}
-		}
+func (m Model) mailSelected(mailbox models.Mailbox, mail models.Mail) tea.Cmd {
+	return func() tea.Msg {
+		return email.MailSelectedMsg{Mailbox: mailbox, Mail: mail}
 	}
-	return nil
 }
 
 type KeyMap struct {

@@ -1,6 +1,8 @@
 package picker
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -73,8 +75,11 @@ func (m Model) Selected() tea.Msg {
 	}
 }
 
-func (m Model) SelectedItem() Item {
-	return m.items[m.selected]
+func (m Model) SelectedItem() (Item, error) {
+	if m.selected >= 0 && m.selected < len(m.items) {
+		return m.items[m.selected], nil
+	}
+	return Item{}, fmt.Errorf("not found")
 }
 
 func (m Model) clampedIndex(index int) int {
@@ -245,7 +250,7 @@ func DefaultKeyMap() KeyMap {
 // Represents an item in the picker list.
 type Item struct {
 	Label string
-	Value int
+	Value any
 	Badge string
 }
 

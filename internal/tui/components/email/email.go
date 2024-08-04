@@ -10,7 +10,8 @@ import (
 )
 
 type MailSelectedMsg struct {
-	Mail models.Mail
+	Mailbox models.Mailbox
+	Mail    models.Mail
 }
 
 type MailDismissMsg struct{}
@@ -42,8 +43,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.viewport.Width = m.Width
-		m.viewport.Height = m.Height - 10
-		fmt.Println(1)
+		m.viewport.Height = m.Height
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -52,8 +52,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 	case MailSelectedMsg:
-		mail := msg.Mail
-		m.viewport.SetContent(m.makeContent(mail))
+		m.viewport.SetContent(m.makeContent(msg.Mailbox, msg.Mail))
 		m.viewport.SetYOffset(0)
 		return m, tea.ClearScreen
 	}
@@ -67,7 +66,7 @@ func (m Model) View() string {
 	return m.viewport.View()
 }
 
-func (m Model) makeContent(mail models.Mail) string {
+func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 	labelStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("241")).
 		PaddingRight(1)
@@ -83,6 +82,12 @@ func (m Model) makeContent(mail models.Mail) string {
 		valueStyle.Render(from),
 	)
 
+	to := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		labelStyle.Render("To"),
+		valueStyle.Render(mailbox.Email()),
+	)
+
 	subject := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		labelStyle.Render("Subject"),
@@ -91,13 +96,11 @@ func (m Model) makeContent(mail models.Mail) string {
 
 	text := valueStyle.
 		MarginTop(1).
-		PaddingLeft(2).
-		Border(lipgloss.ThickBorder(), false, false, false, true).
-		BorderForeground(lipgloss.Color("241")).
 		Render(mail.Text)
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
+		to,
 		from,
 		subject,
 		text,
