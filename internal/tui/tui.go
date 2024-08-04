@@ -7,7 +7,9 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
+	"github.com/ksdme/mail/internal/tui/colors"
 	"github.com/ksdme/mail/internal/tui/components/help"
 	"github.com/ksdme/mail/internal/tui/email"
 	"github.com/ksdme/mail/internal/tui/home"
@@ -121,11 +123,25 @@ func (m Model) View() string {
 		return ""
 	}
 
-	view := "loading"
+	content := "loading"
 	if m.mode == Home {
-		view = m.home.View()
+		content = m.home.View()
 	} else if m.mode == Email {
-		view = m.email.View()
+		content = m.email.View()
+	}
+
+	bottom := help.View(m.Help())
+	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Signature) - 12
+	if gap > 8 {
+		bottom = lipgloss.JoinHorizontal(
+			lipgloss.Left,
+			bottom,
+			lipgloss.
+				NewStyle().
+				PaddingLeft(gap).
+				Foreground(colors.Gray).
+				Render(config.Signature),
+		)
 	}
 
 	return lipgloss.
@@ -134,8 +150,8 @@ func (m Model) View() string {
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				view,
-				help.View(m.Help()),
+				content,
+				bottom,
 			),
 		)
 }
