@@ -304,6 +304,11 @@ func (m Model) Columns() []Column {
 	return m.cols
 }
 
+// HasRows returns a boolean indicating if the table has any rows.
+func (m Model) HasRows() bool {
+	return len(m.rows) > 0
+}
+
 // SetRows sets a new rows state.
 func (m *Model) SetRows(r []Row) {
 	m.rows = r
