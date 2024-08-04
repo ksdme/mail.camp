@@ -150,8 +150,8 @@ func (m Model) View() string {
 		label := item.Label
 		total := len(label) + len(item.Badge) + 2
 		if total > m.Width {
-			// TODO: Trim from the badge too?
-			label = label[:m.Width-total-3] + "…"
+			// TODO: Trim from badges too.
+			label = label[:len(label)-(total-m.Width+3)] + "…"
 		}
 
 		if index == m.highlighted {
