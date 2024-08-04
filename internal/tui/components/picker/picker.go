@@ -9,6 +9,14 @@ import (
 	"github.com/ksdme/mail/internal/tui/colors"
 )
 
+// An item in the picker list.
+type Item struct {
+	ID    int
+	Label string
+	Badge string
+	Value any
+}
+
 // A picker is a component that can be used to show a list of
 // values and have the user pick from them.
 type Model struct {
@@ -55,9 +63,19 @@ func (m Model) IsFocused() bool {
 }
 
 func (m *Model) SetItems(items []Item) {
+	newSelected := 0
+	if item, err := m.SelectedItem(); err == nil {
+		for index, element := range items {
+			if element.ID == item.ID {
+				newSelected = index
+				break
+			}
+		}
+	}
+
 	m.items = items
-	m.selected = 0
-	m.highlighted = 0
+	m.selected = newSelected
+	m.highlighted = newSelected
 }
 
 func (m Model) HasItems() bool {
@@ -65,10 +83,17 @@ func (m Model) HasItems() bool {
 }
 
 func (m Model) SelectedItem() (Item, error) {
-	if m.selected >= 0 && m.selected < len(m.items) {
-		return m.items[m.selected], nil
+	if m.selected < 0 || m.selected >= len(m.items) {
+		return Item{}, fmt.Errorf("invalid selection")
 	}
-	return Item{}, fmt.Errorf("not found")
+	return m.items[m.selected], nil
+}
+
+func (m Model) HighlightedItem() (Item, error) {
+	if m.highlighted < 0 || m.highlighted >= len(m.items) {
+		return Item{}, fmt.Errorf("invalid highlight")
+	}
+	return m.items[m.highlighted], nil
 }
 
 // Mark and return the current highlighted item as the selected item.
@@ -232,15 +257,4 @@ func DefaultKeyMap() KeyMap {
 		Up:   key.NewBinding(key.WithKeys("k", "up", "ctrl+p"), key.WithHelp("k", "up")),
 		Down: key.NewBinding(key.WithKeys("j", "down", "ctrl+n"), key.WithHelp("j", "down")),
 	}
-}
-
-// Represents an item in the picker list.
-type Item struct {
-	Label string
-	Value any
-	Badge string
-}
-
-func (item *Item) FilterValue() string {
-	return item.Label
 }

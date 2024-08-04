@@ -31,6 +31,7 @@ type Model struct {
 
 // Row represents one line in the table.
 type Row struct {
+	ID    int
 	Value any
 	Cols  []string
 }
@@ -315,7 +316,18 @@ func (m Model) HasRows() bool {
 
 // SetRows sets a new rows state.
 func (m *Model) SetRows(r []Row) {
+	cursor := 0
+	if item, err := m.SelectedRow(); err == nil {
+		for index, element := range r {
+			if item.ID == element.ID {
+				cursor = index
+				break
+			}
+		}
+	}
+
 	m.rows = r
+	m.cursor = cursor
 	m.UpdateViewport()
 }
 
