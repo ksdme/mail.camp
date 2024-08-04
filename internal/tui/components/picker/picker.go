@@ -191,7 +191,10 @@ func (m Model) View() string {
 		lines = append(lines, line)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Top, lines...)
+	return lipgloss.
+		NewStyle().
+		Width(m.Width).
+		Render(lipgloss.JoinVertical(lipgloss.Top, lines...))
 }
 
 type Styles struct {
