@@ -151,6 +151,8 @@ func (m Model) Help() []key.Binding {
 
 	if m.mode == Home {
 		bindings = append(bindings, m.home.Help()...)
+	} else if m.mode == Email {
+		bindings = append(bindings, m.email.Help()...)
 	}
 
 	return append(bindings, m.KeyMap.Quit)
@@ -188,18 +190,6 @@ func (m Model) loadMails(mailbox models.Mailbox) tea.Cmd {
 
 type KeyMap struct {
 	Quit key.Binding
-}
-
-func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{
-		k.Quit,
-	}
-}
-
-func (k KeyMap) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Quit},
-	}
 }
 
 func DefaultKeyMap() KeyMap {

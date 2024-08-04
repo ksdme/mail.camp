@@ -258,11 +258,11 @@ func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		FocusMailboxes: key.NewBinding(
 			key.WithKeys("left", "h"),
-			key.WithHelp("←/h", "focus mailboxes"),
+			key.WithHelp("←/h", "mailboxes"),
 		),
 		FocusMails: key.NewBinding(
 			key.WithKeys("right", "l"),
-			key.WithHelp("→/l", "focus mails"),
+			key.WithHelp("→/l", "mails"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),

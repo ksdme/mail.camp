@@ -3,6 +3,7 @@ package email
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,6 +22,7 @@ type Model struct {
 
 	Width  int
 	Height int
+	KeyMap KeyMap
 }
 
 func NewModel() Model {
@@ -32,6 +34,7 @@ func NewModel() Model {
 
 		Width:  initialWidth,
 		Height: initialHeight,
+		KeyMap: DefaultKeyMap(),
 	}
 }
 
@@ -46,8 +49,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.viewport.Height = m.Height
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "q":
+		switch {
+		case key.Matches(msg, m.KeyMap.Dismiss):
 			return m, m.dismiss
 		}
 
@@ -109,4 +112,23 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 
 func (m Model) dismiss() tea.Msg {
 	return MailDismissMsg{}
+}
+
+type KeyMap struct {
+	Dismiss key.Binding
+}
+
+func (m Model) Help() []key.Binding {
+	return []key.Binding{
+		m.KeyMap.Dismiss,
+	}
+}
+
+func DefaultKeyMap() KeyMap {
+	return KeyMap{
+		Dismiss: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "go back"),
+		),
+	}
 }
