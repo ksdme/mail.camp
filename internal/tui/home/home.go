@@ -54,7 +54,7 @@ func NewModel() Model {
 
 	// Setup the mails table.
 	styles := table.DefaultStyles()
-	styles.Header = mailboxes.Styles.Title.PaddingLeft(1)
+	styles.Header = lipgloss.NewStyle().Height(2).Foreground(lipgloss.Color("244"))
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(initialWidth*2/3)),
 		table.WithHeight(initialHeight),
