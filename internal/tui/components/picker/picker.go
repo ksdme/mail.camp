@@ -139,6 +139,7 @@ func (m Model) View() string {
 		}
 	}
 
+	// Render lines.
 	for index, item := range items {
 		legend := " "
 		if index == m.selected {
@@ -150,7 +151,7 @@ func (m Model) View() string {
 		total := len(label) + len(item.Badge) + 2
 		if total > m.Width {
 			// TODO: Trim from the badge too?
-			label = label[:m.Width-total-6] + "..."
+			label = label[:m.Width-total-3] + "…"
 		}
 
 		if index == m.highlighted {
@@ -209,7 +210,7 @@ func DefaultStyles() Styles {
 		Regular:        lipgloss.NewStyle(),
 		SelectedLabel:  lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
 		SelectedLegend: lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
-		Highlighted:    lipgloss.NewStyle().Foreground(lipgloss.Color("99")),
+		Highlighted:    lipgloss.NewStyle().Foreground(lipgloss.Color("212")),
 	}
 }
 
