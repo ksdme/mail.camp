@@ -96,6 +96,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case home.CreateRandomMailboxMsg:
 		return m, m.createRandomMailbox
 
+	case home.DeleteMailboxMsg:
+		return m, m.deleteMailbox(msg.Mailbox)
+
 	case email.MailSelectedMsg:
 		m.mode = Email
 		m.email, cmd = m.email.Update(msg)
@@ -209,6 +212,22 @@ func (m Model) createRandomMailbox() tea.Msg {
 	}
 
 	return m.refreshMailboxes()
+}
+
+func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
+	return func() tea.Msg {
+		// TODO: The context should be bound to the ssh connection.
+		_, err := m.db.
+			NewDelete().
+			Model(&mailbox).
+			Where("id = ?", mailbox.ID).
+			Exec(context.Background())
+		if err != nil {
+			return nil
+		}
+
+		return m.refreshMailboxes()
+	}
 }
 
 type KeyMap struct {

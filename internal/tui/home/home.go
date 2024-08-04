@@ -31,6 +31,10 @@ type MailsRefreshedMsg struct {
 
 type CreateRandomMailboxMsg struct{}
 
+type DeleteMailboxMsg struct {
+	Mailbox models.Mailbox
+}
+
 type Model struct {
 	mailboxes picker.Model
 	mails     table.Model
@@ -129,6 +133,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case key.Matches(msg, m.KeyMap.CreateRandomMailbox):
 			return m, m.createRandomMailbox
+
+		case key.Matches(msg, m.KeyMap.DeleteMailbox):
+			if item, err := m.mailboxes.HighlightedItem(); err == nil {
+				mailbox := item.Value.(models.Mailbox)
+				return m, m.deleteMailbox(mailbox)
+			}
 		}
 
 	case MailboxesRefreshedMsg:
@@ -136,6 +146,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		var items []picker.Item
 		for _, mailbox := range msg.Mailboxes {
 			items = append(items, picker.Item{
+				ID:    int(mailbox.ID),
 				Label: mailbox.Email(),
 				Value: mailbox,
 				Badge: "2",
@@ -154,18 +165,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		return m, nil
 
 	case MailsRefreshedMsg:
-		// TODO: Retain selection if the same mailbox is updated.
 		// TODO: Handle error.
 		if msg.Mailbox.ID == m.SelectedMailbox.ID {
 			var items []table.Row
 			for _, mail := range msg.Mails {
 				items = append(items, table.Row{
-					Cols: []string{
-						mail.Subject,
-						mail.FromAddress,
-						"8 mins ago",
-					},
+					ID:    int(mail.ID),
 					Value: mail,
+					Cols:  []string{mail.Subject, mail.FromAddress, "8 mins ago"},
 				})
 			}
 			m.mails.SetRows(items)
@@ -231,6 +238,12 @@ func (m Model) mailboxSelected() tea.Msg {
 	return MailboxSelectedMsg{Mailbox: m.SelectedMailbox}
 }
 
+func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
+	return func() tea.Msg {
+		return DeleteMailboxMsg{mailbox}
+	}
+}
+
 func (m Model) mailSelected(mailbox models.Mailbox, mail models.Mail) tea.Cmd {
 	return func() tea.Msg {
 		return email.MailSelectedMsg{Mailbox: mailbox, Mail: mail}
@@ -248,6 +261,7 @@ func (m Model) Help() []key.Binding {
 		help = append(
 			help,
 			m.KeyMap.CreateRandomMailbox,
+			m.KeyMap.DeleteMailbox,
 			m.KeyMap.Select,
 			m.KeyMap.FocusMails,
 		)
@@ -264,6 +278,7 @@ func (m Model) Help() []key.Binding {
 
 type KeyMap struct {
 	CreateRandomMailbox key.Binding
+	DeleteMailbox       key.Binding
 
 	Select key.Binding
 
@@ -276,6 +291,10 @@ func DefaultKeyMap() KeyMap {
 		CreateRandomMailbox: key.NewBinding(
 			key.WithKeys("ctrl+n"),
 			key.WithHelp("ctrl+n", "generate mailbox"),
+		),
+		DeleteMailbox: key.NewBinding(
+			key.WithKeys("ctrl+k"),
+			key.WithHelp("ctrl+k", "delete mailbox"),
 		),
 
 		Select: key.NewBinding(
