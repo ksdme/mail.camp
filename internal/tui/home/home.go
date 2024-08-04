@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
+	"github.com/ksdme/mail/internal/tui/components/email"
 	"github.com/ksdme/mail/internal/tui/components/picker"
 	"github.com/ksdme/mail/internal/tui/components/table"
 	"github.com/ksdme/mail/internal/utils"
@@ -28,10 +29,10 @@ type MailboxSelectedMsg struct {
 }
 
 type Model struct {
+	selected int
+
 	mailboxes picker.Model
 	mails     table.Model
-
-	selected int
 
 	Width  int
 	Height int
@@ -99,6 +100,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				m.mailboxes.Blur()
 				m.mails.Focus()
 			}
+
+		case "enter":
+			if m.mails.Focused() {
+				return m, m.mailSelected
+			}
 		}
 
 	case picker.SelectedMsg:
@@ -138,9 +144,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			var items []table.Row
 			for _, mail := range msg.Mails {
 				items = append(items, table.Row{
-					mail.Subject,
-					mail.FromAddress,
-					"8 mins ago",
+					Cols: []string{
+						mail.Subject,
+						mail.FromAddress,
+						"8 mins ago",
+					},
+					Value: mail,
 				})
 			}
 			m.mails.SetRows(items)
@@ -201,6 +210,15 @@ func (m Model) View() string {
 
 func (m Model) mailboxSelected() tea.Msg {
 	return MailboxSelectedMsg{MailboxID: m.selected}
+}
+
+func (m Model) mailSelected() tea.Msg {
+	if row, err := m.mails.SelectedRow(); err == nil {
+		if mail, ok := row.Value.(models.Mail); ok {
+			return email.MailSelectedMsg{Mail: mail}
+		}
+	}
+	return nil
 }
 
 type KeyMap struct {

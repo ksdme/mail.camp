@@ -3,7 +3,7 @@
 package table
 
 import (
-	"strings"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -29,7 +29,10 @@ type Model struct {
 }
 
 // Row represents one line in the table.
-type Row []string
+type Row struct {
+	Value any
+	Cols  []string
+}
 
 // Column defines the table structure.
 type Column struct {
@@ -286,12 +289,12 @@ func (m *Model) UpdateViewport() {
 
 // SelectedRow returns the selected row.
 // You can cast it to your own implementation.
-func (m Model) SelectedRow() Row {
+func (m Model) SelectedRow() (Row, error) {
 	if m.cursor < 0 || m.cursor >= len(m.rows) {
-		return nil
+		return Row{}, fmt.Errorf("invalid cursor")
 	}
 
-	return m.rows[m.cursor]
+	return m.rows[m.cursor], nil
 }
 
 // Rows returns the current rows.
@@ -396,22 +399,6 @@ func (m *Model) GotoBottom() {
 	m.MoveDown(len(m.rows))
 }
 
-// FromValues create the table rows from a simple string. It uses `\n` by
-// default for getting all the rows and the given separator for the fields on
-// each row.
-func (m *Model) FromValues(value, separator string) {
-	rows := []Row{}
-	for _, line := range strings.Split(value, "\n") {
-		r := Row{}
-		for _, field := range strings.Split(line, separator) {
-			r = append(r, field)
-		}
-		rows = append(rows, r)
-	}
-
-	m.SetRows(rows)
-}
-
 // StyleFunc is a function that can be used to customize the style of a table cell based on the row and column index.
 type StyleFunc func(row int) lipgloss.Style
 
@@ -440,7 +427,7 @@ func (m *Model) renderRow(r int) string {
 	}
 
 	s := make([]string, 0, len(m.cols))
-	for i, value := range m.rows[r] {
+	for i, value := range m.rows[r].Cols {
 		if m.cols[i].Width <= 0 {
 			continue
 		}

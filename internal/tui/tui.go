@@ -2,11 +2,11 @@ package tui
 
 import (
 	"context"
-	"log/slog"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
+	"github.com/ksdme/mail/internal/tui/components/email"
 	"github.com/ksdme/mail/internal/tui/home"
 	"github.com/uptrace/bun"
 )
@@ -15,6 +15,7 @@ type mode int
 
 const (
 	Home mode = iota
+	Email
 )
 
 // Represents the top most model.
@@ -22,8 +23,9 @@ type Model struct {
 	db      *bun.DB
 	account models.Account
 
-	mode mode
-	home home.Model
+	mode  mode
+	home  home.Model
+	email email.Model
 
 	width  int
 	height int
@@ -36,14 +38,16 @@ func NewModel(db *bun.DB, account models.Account) Model {
 		db:      db,
 		account: account,
 
-		mode: Home,
-		home: home.NewModel(),
+		mode:  Home,
+		home:  home.NewModel(),
+		email: email.NewModel(),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.home.Init(),
+		m.email.Init(),
 		m.loadMailboxes,
 	)
 }
@@ -59,6 +63,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.home.Width = m.width - 12
 		m.home.Height = m.height - 6
 
+		m.email.Width = m.home.Width
+		m.email.Height = m.home.Height
+
+		m.home, _ = m.home.Update(msg)
+		m.email, _ = m.email.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -66,16 +77,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case home.MailboxSelectedMsg:
-		return m, m.loadMails(msg.MailboxID)
-
 	case home.MailboxesUpdateMsg:
 		m.home, cmd = m.home.Update(msg)
 		return m, cmd
+
+	case home.MailboxSelectedMsg:
+		return m, m.loadMails(msg.MailboxID)
+
+	case email.MailSelectedMsg:
+		m.mode = Email
+		m.email, cmd = m.email.Update(msg)
+		return m, tea.Batch(tea.ClearScreen, cmd)
+
+	case email.MailDismissMsg:
+		m.mode = Home
+		return m, tea.ClearScreen
 	}
 
 	if m.mode == Home {
 		m.home, cmd = m.home.Update(msg)
+		return m, cmd
+	} else if m.mode == Email {
+		m.email, cmd = m.email.Update(msg)
 		return m, cmd
 	}
 
@@ -91,6 +114,8 @@ func (m Model) View() string {
 	view := "loading"
 	if m.mode == Home {
 		view = m.home.View()
+	} else if m.mode == Email {
+		view = m.email.View()
 	}
 
 	// TODO: This should actually be centered.
@@ -122,7 +147,6 @@ func (m Model) loadMailboxes() tea.Msg {
 		Model(&mailboxes).
 		Where("account_id = ?", m.account.ID).
 		Scan(context.Background())
-	slog.Debug("mailboxes", "count", len(mailboxes))
 
 	return home.MailboxesUpdateMsg{Mailboxes: mailboxes, Err: err}
 }
