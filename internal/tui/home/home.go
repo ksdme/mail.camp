@@ -261,9 +261,11 @@ func (m Model) Help() []key.Binding {
 
 type KeyMap struct {
 	CreateRandomMailbox key.Binding
-	FocusMailboxes      key.Binding
-	FocusMails          key.Binding
-	Select              key.Binding
+
+	Select key.Binding
+
+	FocusMailboxes key.Binding
+	FocusMails     key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -272,6 +274,12 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("ctrl+n"),
 			key.WithHelp("ctrl+n", "generate mailbox"),
 		),
+
+		Select: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "select"),
+		),
+
 		FocusMailboxes: key.NewBinding(
 			key.WithKeys("left", "h"),
 			key.WithHelp("←/h", "mailboxes"),
@@ -279,10 +287,6 @@ func DefaultKeyMap() KeyMap {
 		FocusMails: key.NewBinding(
 			key.WithKeys("right", "l"),
 			key.WithHelp("→/l", "mails"),
-		),
-		Select: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "select"),
 		),
 	}
 }
