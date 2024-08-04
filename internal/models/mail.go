@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // TODO: Add CreatedAt, UpdatedAt time.
 type Mail struct {
 	ID          int64 `bun:",pk,autoincrement"`
@@ -14,4 +16,6 @@ type Mail struct {
 	// TODO: We need to setup cascade relationship.
 	MailboxID int64    `bun:",notnull"`
 	Mailbox   *Mailbox `bun:"rel:belongs-to,join:mailbox_id=id"`
+
+	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp"`
 }

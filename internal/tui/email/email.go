@@ -2,6 +2,7 @@ package email
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -97,6 +98,12 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 		valueStyle.Render(mail.Subject),
 	)
 
+	created := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		labelStyle.Render("Received"),
+		valueStyle.Render(mail.CreatedAt.Format(time.RFC822)),
+	)
+
 	text := valueStyle.
 		MarginTop(1).
 		Render(mail.Text)
@@ -106,6 +113,7 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 		to,
 		from,
 		subject,
+		created,
 		text,
 	)
 }
