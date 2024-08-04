@@ -7,9 +7,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
-	"github.com/ksdme/mail/internal/tui/components/email"
 	"github.com/ksdme/mail/internal/tui/components/picker"
 	"github.com/ksdme/mail/internal/tui/components/table"
+	"github.com/ksdme/mail/internal/tui/email"
 	"github.com/ksdme/mail/internal/utils"
 )
 

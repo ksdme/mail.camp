@@ -7,8 +7,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
-	"github.com/ksdme/mail/internal/tui/components/email"
 	"github.com/ksdme/mail/internal/tui/components/help"
+	"github.com/ksdme/mail/internal/tui/email"
 	"github.com/ksdme/mail/internal/tui/home"
 	"github.com/uptrace/bun"
 )
