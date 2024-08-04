@@ -158,18 +158,8 @@ func (m Model) View() string {
 			label = label[:len(label)-(total-m.Width+3)] + "…"
 		}
 
-		if index == m.highlighted {
-			if m.IsFocused() {
-				label = m.Styles.Highlighted.Render(label)
-			} else {
-				if index == m.selected {
-					label = m.Styles.SelectedLabel.Render(label)
-				} else {
-					label = m.Styles.Regular.Render(label)
-				}
-			}
-		} else if index == m.selected {
-			label = m.Styles.SelectedLabel.Render(label)
+		if index == m.highlighted && m.IsFocused() {
+			label = m.Styles.Highlighted.Render(label)
 		} else {
 			label = m.Styles.Regular.Render(label)
 		}
@@ -205,7 +195,6 @@ type Styles struct {
 	Title          lipgloss.Style
 	Badge          lipgloss.Style
 	Regular        lipgloss.Style
-	SelectedLabel  lipgloss.Style
 	SelectedLegend lipgloss.Style
 	Highlighted    lipgloss.Style
 }
@@ -215,7 +204,6 @@ func DefaultStyles() Styles {
 		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
 		Badge:          lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
 		Regular:        lipgloss.NewStyle(),
-		SelectedLabel:  lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
 		SelectedLegend: lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
 		Highlighted:    lipgloss.NewStyle().Foreground(lipgloss.Color("212")),
 	}
