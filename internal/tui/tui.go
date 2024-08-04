@@ -137,6 +137,10 @@ func (m Model) loadMails(mailbox int) tea.Cmd {
 			Where("mailbox_id = ?", mailbox).
 			Scan(context.Background())
 
-		return home.MailsUpdateMsg{Mails: mails, Err: err}
+		return home.MailsUpdateMsg{
+			Mailbox: mailbox,
+			Mails:   mails,
+			Err:     err,
+		}
 	}
 }

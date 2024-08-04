@@ -18,8 +18,9 @@ type MailboxesUpdateMsg struct {
 }
 
 type MailsUpdateMsg struct {
-	Mails []models.Mail
-	Err   error
+	Mailbox int
+	Mails   []models.Mail
+	Err     error
 }
 
 type MailboxSelectedMsg struct {
@@ -29,6 +30,8 @@ type MailboxSelectedMsg struct {
 type Model struct {
 	mailboxes picker.Model
 	mails     table.Model
+
+	selected int
 
 	Width  int
 	Height int
@@ -98,6 +101,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 
+	case picker.SelectedMsg:
+		m.selected = msg.Item.Value
+
+		m.mails.SetRows([]table.Row{})
+		m.mailboxes.Blur()
+		m.mails.Focus()
+
+		return m, m.mailboxSelected
+
 	case MailboxesUpdateMsg:
 		// TODO: Handle error.
 		var items []picker.Item
@@ -112,33 +124,36 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		// Trigger mails load.
 		m.mails.SetRows([]table.Row{})
-		return m, m.mailboxSelected
+		if m.mailboxes.HasItems() {
+			m.selected = m.mailboxes.SelectedItem().Value
+			return m, m.mailboxSelected
+		} else {
+			return m, nil
+		}
 
 	case MailsUpdateMsg:
 		// TODO: Retain selection if the same mailbox is updated.
 		// TODO: Handle error.
-		var items []table.Row
-		for _, mail := range msg.Mails {
-			items = append(items, table.Row{
-				mail.Subject,
-				mail.FromAddress,
-				"8 mins ago",
-			})
-		}
-		m.mails.SetRows(items)
+		if msg.Mailbox == m.selected {
+			var items []table.Row
+			for _, mail := range msg.Mails {
+				items = append(items, table.Row{
+					mail.Subject,
+					mail.FromAddress,
+					"8 mins ago",
+				})
+			}
+			m.mails.SetRows(items)
 
-		// If the update caused there to be no mails.
-		if !m.mails.HasRows() {
-			m.mails.Blur()
-			m.mailboxes.Focus()
+			// If the update caused there to be no mails.
+			if !m.mails.HasRows() {
+				m.mails.Blur()
+				m.mailboxes.Focus()
+			}
+			return m, nil
+		} else {
+			return m, nil
 		}
-		return m, nil
-
-	case picker.SelectedMsg:
-		m.mails.SetRows([]table.Row{})
-		m.mailboxes.Blur()
-		m.mails.Focus()
-		return m, m.mailboxSelected
 	}
 
 	var cmd tea.Cmd
@@ -185,12 +200,7 @@ func (m Model) View() string {
 }
 
 func (m Model) mailboxSelected() tea.Msg {
-	if m.mailboxes.HasItems() {
-		selection := m.mailboxes.SelectedItem()
-		return MailboxSelectedMsg{MailboxID: selection.Value}
-	}
-
-	return nil
+	return MailboxSelectedMsg{MailboxID: m.selected}
 }
 
 type KeyMap struct {
