@@ -67,7 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		m.home.Width = m.width - 12
-		m.home.Height = m.height - 7
+		m.home.Height = m.height - 5
 
 		m.email.Width = m.home.Width
 		m.email.Height = m.home.Height
@@ -124,22 +124,12 @@ func (m Model) View() string {
 		view = m.email.View()
 	}
 
-	// TODO: This should actually be centered.
-	decoration := lipgloss.
-		NewStyle().
-		Width(m.width).
-		Align(lipgloss.Center).
-		PaddingBottom(2).
-		Foreground(lipgloss.Color("244")).
-		Render("mail.ssh.camp")
-
 	return lipgloss.
 		NewStyle().
 		Padding(2, 6).
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				decoration,
 				view,
 				help.View(m.Help()),
 			),

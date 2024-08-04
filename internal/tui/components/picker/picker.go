@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/tui/colors"
 )
 
 // A picker is a component that can be used to show a list of
@@ -196,11 +197,11 @@ type Styles struct {
 
 func DefaultStyles() Styles {
 	return Styles{
-		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(lipgloss.Color("244")),
-		Badge:          lipgloss.NewStyle().Foreground(lipgloss.Color("244")),
+		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(colors.Gray),
+		Badge:          lipgloss.NewStyle().Foreground(colors.Gray),
 		Regular:        lipgloss.NewStyle(),
-		SelectedLegend: lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true),
-		Highlighted:    lipgloss.NewStyle().Foreground(lipgloss.Color("212")),
+		SelectedLegend: lipgloss.NewStyle().Foreground(colors.Accent).Bold(true),
+		Highlighted:    lipgloss.NewStyle().Foreground(colors.Accent),
 	}
 }
 

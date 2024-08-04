@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
+	"github.com/ksdme/mail/internal/tui/colors"
 	"github.com/ksdme/mail/internal/tui/components/picker"
 	"github.com/ksdme/mail/internal/tui/components/table"
 	"github.com/ksdme/mail/internal/tui/email"
@@ -54,7 +55,7 @@ func NewModel() Model {
 
 	// Setup the mails table.
 	styles := table.DefaultStyles()
-	styles.Header = lipgloss.NewStyle().Height(2).Foreground(lipgloss.Color("244"))
+	styles.Header = lipgloss.NewStyle().Height(2).Foreground(colors.Gray)
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(initialWidth*2/3)),
 		table.WithHeight(initialHeight),
@@ -189,7 +190,7 @@ func (m Model) View() string {
 	if !m.mailboxes.HasItems() {
 		return utils.
 			Box(m.Width, m.Height, true, true).
-			Foreground(lipgloss.Color("244")).
+			Foreground(colors.Gray).
 			Render("no mailboxes :(")
 	}
 
@@ -204,7 +205,7 @@ func (m Model) View() string {
 			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
 			utils.
 				Box(m.mails.Width(), m.mails.Height(), false, false).
-				Foreground(lipgloss.Color("244")).
+				Foreground(colors.Gray).
 				Render(fmt.Sprintf("no mails in %s, incoming mails are only stored for 48h", "mailbox@localhost")),
 		)
 	} else {
