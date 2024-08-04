@@ -226,6 +226,15 @@ func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
 			return nil
 		}
 
+		_, err = m.db.
+			NewDelete().
+			Model(&models.Mail{}).
+			Where("mailbox_id = ?", mailbox.ID).
+			Exec(context.Background())
+		if err != nil {
+			return nil
+		}
+
 		return m.refreshMailboxes()
 	}
 }
