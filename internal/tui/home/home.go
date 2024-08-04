@@ -2,6 +2,7 @@ package home
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -169,10 +170,15 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		if msg.Mailbox.ID == m.SelectedMailbox.ID {
 			var items []table.Row
 			for _, mail := range msg.Mails {
+				age := fmt.Sprintf(
+					"%s ago",
+					utils.RoundedAge(time.Since(mail.CreatedAt)),
+				)
+
 				items = append(items, table.Row{
 					ID:    int(mail.ID),
 					Value: mail,
-					Cols:  []string{mail.Subject, mail.FromAddress, "8 mins ago"},
+					Cols:  []string{mail.Subject, mail.FromAddress, age},
 				})
 			}
 			m.mails.SetRows(items)
