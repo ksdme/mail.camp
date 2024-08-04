@@ -34,6 +34,7 @@ type Model struct {
 
 	Width  int
 	Height int
+	KeyMap KeyMap
 
 	SelectedMailbox models.Mailbox
 }
@@ -70,6 +71,10 @@ func NewModel() Model {
 	return Model{
 		mailboxes: mailboxes,
 		mails:     table,
+
+		Width:  initialWidth,
+		Height: initialHeight,
+		KeyMap: DefaultKeyMap(),
 	}
 }
 
@@ -90,34 +95,35 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.mails.SetColumns(makeMailTableColumns(m.mails.Width()))
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "left", "h":
+		switch {
+		case key.Matches(msg, m.KeyMap.FocusMailboxes):
 			m.mailboxes.Focus()
 			m.mails.Blur()
 
-		case "right", "l":
+		case key.Matches(msg, m.KeyMap.FocusMails):
 			if m.mails.HasRows() {
 				m.mailboxes.Blur()
 				m.mails.Focus()
 			}
 
-		case "enter":
-			if m.mails.Focused() {
+		case key.Matches(msg, m.KeyMap.Select):
+			if m.mailboxes.IsFocused() {
+				if item, err := m.mailboxes.Select(); err == nil {
+					m.SelectedMailbox = item.Value.(models.Mailbox)
+
+					m.mails.SetRows([]table.Row{})
+					m.mailboxes.Blur()
+					m.mails.Focus()
+
+					return m, m.mailboxSelected
+				}
+			} else if m.mails.Focused() {
 				if row, err := m.mails.SelectedRow(); err == nil {
 					mail := row.Value.(models.Mail)
 					return m, m.mailSelected(m.SelectedMailbox, mail)
 				}
 			}
 		}
-
-	case picker.SelectedMsg:
-		m.SelectedMailbox = msg.Item.Value.(models.Mailbox)
-
-		m.mails.SetRows([]table.Row{})
-		m.mailboxes.Blur()
-		m.mails.Focus()
-
-		return m, m.mailboxSelected
 
 	case MailboxesUpdateMsg:
 		// TODO: Handle error.
@@ -222,9 +228,47 @@ func (m Model) mailSelected(mailbox models.Mailbox, mail models.Mail) tea.Cmd {
 	}
 }
 
+func (m Model) Help() []key.Binding {
+	var help []key.Binding
+
+	if m.mailboxes.IsFocused() {
+		help = append(
+			help,
+			m.KeyMap.Select,
+			m.KeyMap.FocusMails,
+		)
+	} else if m.mails.Focused() {
+		help = append(
+			help,
+			m.KeyMap.Select,
+			m.KeyMap.FocusMailboxes,
+		)
+	}
+
+	return help
+}
+
 type KeyMap struct {
 	FocusMailboxes key.Binding
 	FocusMails     key.Binding
+	Select         key.Binding
+}
+
+func DefaultKeyMap() KeyMap {
+	return KeyMap{
+		FocusMailboxes: key.NewBinding(
+			key.WithKeys("left", "h"),
+			key.WithHelp("←/h", "focus mailboxes"),
+		),
+		FocusMails: key.NewBinding(
+			key.WithKeys("right", "l"),
+			key.WithHelp("→/l", "focus mails"),
+		),
+		Select: key.NewBinding(
+			key.WithKeys("enter"),
+			key.WithHelp("enter", "select"),
+		),
+	}
 }
 
 func makeMailTableColumns(width int) []table.Column {

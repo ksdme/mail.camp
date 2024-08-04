@@ -8,12 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Represents the message passed when an item from the list is
-// selected.
-type SelectedMsg struct {
-	Item Item
-}
-
 // A picker is a component that can be used to show a list of
 // values and have the user pick from them.
 type Model struct {
@@ -69,17 +63,17 @@ func (m Model) HasItems() bool {
 	return len(m.items) > 0
 }
 
-func (m Model) Selected() tea.Msg {
-	return SelectedMsg{
-		Item: m.items[m.selected],
-	}
-}
-
 func (m Model) SelectedItem() (Item, error) {
 	if m.selected >= 0 && m.selected < len(m.items) {
 		return m.items[m.selected], nil
 	}
 	return Item{}, fmt.Errorf("not found")
+}
+
+// Mark and return the current highlighted item as the selected item.
+func (m *Model) Select() (Item, error) {
+	m.selected = m.highlighted
+	return m.SelectedItem()
 }
 
 func (m Model) clampedIndex(index int) int {
@@ -114,10 +108,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 			case key.Matches(msg, m.KeyMap.Down):
 				m.highlighted = m.clampedIndex(m.highlighted + 1)
-
-			case key.Matches(msg, m.KeyMap.Select):
-				m.selected = m.highlighted
-				return m, m.Selected
 			}
 		}
 	}
@@ -220,17 +210,15 @@ type KeyMap struct {
 
 	Up   key.Binding
 	Down key.Binding
-
-	Select key.Binding
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Select}
+	return []key.Binding{k.Up, k.Down}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.Up, k.Down, k.Select},
+		{k.Up, k.Down},
 		{k.GoToTop, k.GoToLast},
 	}
 }
@@ -242,8 +230,6 @@ func DefaultKeyMap() KeyMap {
 
 		Up:   key.NewBinding(key.WithKeys("k", "up", "ctrl+p"), key.WithHelp("k", "up")),
 		Down: key.NewBinding(key.WithKeys("j", "down", "ctrl+n"), key.WithHelp("j", "down")),
-
-		Select: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select")),
 	}
 }
 

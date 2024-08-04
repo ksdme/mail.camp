@@ -3,10 +3,12 @@ package tui
 import (
 	"context"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui/components/email"
+	"github.com/ksdme/mail/internal/tui/components/help"
 	"github.com/ksdme/mail/internal/tui/home"
 	"github.com/uptrace/bun"
 )
@@ -30,6 +32,8 @@ type Model struct {
 	width  int
 	height int
 
+	KeyMap KeyMap
+
 	quitting bool
 }
 
@@ -41,6 +45,8 @@ func NewModel(db *bun.DB, account models.Account) Model {
 		mode:  Home,
 		home:  home.NewModel(),
 		email: email.NewModel(),
+
+		KeyMap: DefaultKeyMap(),
 	}
 }
 
@@ -61,7 +67,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		m.home.Width = m.width - 12
-		m.home.Height = m.height - 6
+		m.home.Height = m.height - 7
 
 		m.email.Width = m.home.Width
 		m.email.Height = m.home.Height
@@ -71,8 +77,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, m.KeyMap.Quit):
 			m.quitting = true
 			return m, tea.Quit
 		}
@@ -135,8 +141,19 @@ func (m Model) View() string {
 				lipgloss.Top,
 				decoration,
 				view,
+				help.View(m.Help()),
 			),
 		)
+}
+
+func (m Model) Help() []key.Binding {
+	var bindings []key.Binding
+
+	if m.mode == Home {
+		bindings = append(bindings, m.home.Help()...)
+	}
+
+	return append(bindings, m.KeyMap.Quit)
 }
 
 func (m Model) loadMailboxes() tea.Msg {
@@ -166,5 +183,30 @@ func (m Model) loadMails(mailbox models.Mailbox) tea.Cmd {
 			Mails:   mails,
 			Err:     err,
 		}
+	}
+}
+
+type KeyMap struct {
+	Quit key.Binding
+}
+
+func (k KeyMap) ShortHelp() []key.Binding {
+	return []key.Binding{
+		k.Quit,
+	}
+}
+
+func (k KeyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Quit},
+	}
+}
+
+func DefaultKeyMap() KeyMap {
+	return KeyMap{
+		Quit: key.NewBinding(
+			key.WithKeys("ctrl+c", "q"),
+			key.WithHelp("q", "quit"),
+		),
 	}
 }
