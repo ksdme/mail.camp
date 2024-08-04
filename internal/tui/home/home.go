@@ -29,6 +29,8 @@ type MailsRefreshedMsg struct {
 	Err     error
 }
 
+type CreateRandomMailboxMsg struct{}
+
 type Model struct {
 	mailboxes picker.Model
 	mails     table.Model
@@ -124,6 +126,9 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 					return m, m.mailSelected(m.SelectedMailbox, mail)
 				}
 			}
+
+		case key.Matches(msg, m.KeyMap.CreateRandomMailbox):
+			return m, m.createRandomMailbox
 		}
 
 	case MailboxesRefreshedMsg:
@@ -229,12 +234,17 @@ func (m Model) mailSelected(mailbox models.Mailbox, mail models.Mail) tea.Cmd {
 	}
 }
 
+func (m Model) createRandomMailbox() tea.Msg {
+	return CreateRandomMailboxMsg{}
+}
+
 func (m Model) Help() []key.Binding {
 	var help []key.Binding
 
 	if m.mailboxes.IsFocused() {
 		help = append(
 			help,
+			m.KeyMap.CreateRandomMailbox,
 			m.KeyMap.Select,
 			m.KeyMap.FocusMails,
 		)
@@ -250,13 +260,18 @@ func (m Model) Help() []key.Binding {
 }
 
 type KeyMap struct {
-	FocusMailboxes key.Binding
-	FocusMails     key.Binding
-	Select         key.Binding
+	CreateRandomMailbox key.Binding
+	FocusMailboxes      key.Binding
+	FocusMails          key.Binding
+	Select              key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
+		CreateRandomMailbox: key.NewBinding(
+			key.WithKeys("ctrl+n"),
+			key.WithHelp("ctrl+n", "generate mailbox"),
+		),
 		FocusMailboxes: key.NewBinding(
 			key.WithKeys("left", "h"),
 			key.WithHelp("←/h", "mailboxes"),

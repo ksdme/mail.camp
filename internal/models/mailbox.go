@@ -30,8 +30,8 @@ var (
 // On the other hand, random mailboxes will be purely alphabetic and have
 // a minimum length that is greater than x.
 const (
-	wildcardPrefixMaxSize    = 24
-	randomMailboxNameMinSize = 32
+	wildcardPrefixMaxSize    = 16
+	randomMailboxNameMinSize = 18
 )
 
 // TODO: Add CreatedAt, UpdatedAt fields.
@@ -123,7 +123,7 @@ func CreateRandomMailbox(ctx context.Context, db *bun.DB, account Account) (*Mai
 			name = normalizeMailbox(name)
 		}
 
-		if exists, err := db.NewSelect().Where("name = ?", name).Exists(ctx); err != nil {
+		if exists, err := db.NewSelect().Model(&Mailbox{}).Where("name = ?", name).Exists(ctx); err != nil {
 			return nil, errors.Wrap(err, "error while finding an unused name")
 		} else if !exists {
 			break

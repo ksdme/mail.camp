@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -90,6 +91,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case home.MailboxSelectedMsg:
 		return m, m.refreshMails(msg.Mailbox)
 
+	case home.CreateRandomMailboxMsg:
+		return m, m.createRandomMailbox
+
 	case email.MailSelectedMsg:
 		m.mode = Email
 		m.email, cmd = m.email.Update(msg)
@@ -155,6 +159,7 @@ func (m Model) refreshMailboxes() tea.Msg {
 	err := m.db.NewSelect().
 		Model(&mailboxes).
 		Where("account_id = ?", m.account.ID).
+		Order("id DESC").
 		Scan(context.Background())
 
 	return home.MailboxesRefreshedMsg{Mailboxes: mailboxes, Err: err}
@@ -176,6 +181,18 @@ func (m Model) refreshMails(mailbox models.Mailbox) tea.Cmd {
 			Err:     err,
 		}
 	}
+}
+
+func (m Model) createRandomMailbox() tea.Msg {
+	// TODO: The context should be bound to the ssh connection.
+	_, err := models.CreateRandomMailbox(context.Background(), m.db, m.account)
+	if err != nil {
+		fmt.Println(err)
+		// TODO: Handle this error.
+		return nil
+	}
+
+	return m.refreshMailboxes()
 }
 
 type KeyMap struct {
