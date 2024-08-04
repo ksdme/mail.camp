@@ -284,7 +284,7 @@ func DefaultKeyMap() KeyMap {
 		),
 
 		FocusMailboxes: key.NewBinding(
-			key.WithKeys("left", "h"),
+			key.WithKeys("left", "h", "esc"),
 			key.WithHelp("←/h", "mailboxes"),
 		),
 		FocusMails: key.NewBinding(
