@@ -14,19 +14,19 @@ import (
 	"github.com/ksdme/mail/internal/utils"
 )
 
-type MailboxesUpdateMsg struct {
+type MailboxesRefreshedMsg struct {
 	Mailboxes []models.Mailbox
 	Err       error
 }
 
-type MailsUpdateMsg struct {
+type MailboxSelectedMsg struct {
+	Mailbox models.Mailbox
+}
+
+type MailsRefreshedMsg struct {
 	Mailbox models.Mailbox
 	Mails   []models.Mail
 	Err     error
-}
-
-type MailboxSelectedMsg struct {
-	Mailbox models.Mailbox
 }
 
 type Model struct {
@@ -126,7 +126,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 
-	case MailboxesUpdateMsg:
+	case MailboxesRefreshedMsg:
 		// TODO: Handle error.
 		var items []picker.Item
 		for _, mailbox := range msg.Mailboxes {
@@ -148,7 +148,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case MailsUpdateMsg:
+	case MailsRefreshedMsg:
 		// TODO: Retain selection if the same mailbox is updated.
 		// TODO: Handle error.
 		if msg.Mailbox.ID == m.SelectedMailbox.ID {

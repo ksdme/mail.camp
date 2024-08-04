@@ -54,7 +54,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.home.Init(),
 		m.email.Init(),
-		m.loadMailboxes,
+		m.refreshMailboxes,
 	)
 }
 
@@ -83,12 +83,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
-	case home.MailboxesUpdateMsg:
+	case home.MailboxesRefreshedMsg:
 		m.home, cmd = m.home.Update(msg)
 		return m, cmd
 
 	case home.MailboxSelectedMsg:
-		return m, m.loadMails(msg.Mailbox)
+		return m, m.refreshMails(msg.Mailbox)
 
 	case email.MailSelectedMsg:
 		m.mode = Email
@@ -148,7 +148,7 @@ func (m Model) Help() []key.Binding {
 	return append(bindings, m.KeyMap.Quit)
 }
 
-func (m Model) loadMailboxes() tea.Msg {
+func (m Model) refreshMailboxes() tea.Msg {
 	var mailboxes []models.Mailbox
 
 	// TODO: The context should be bound to the ssh connection.
@@ -157,10 +157,10 @@ func (m Model) loadMailboxes() tea.Msg {
 		Where("account_id = ?", m.account.ID).
 		Scan(context.Background())
 
-	return home.MailboxesUpdateMsg{Mailboxes: mailboxes, Err: err}
+	return home.MailboxesRefreshedMsg{Mailboxes: mailboxes, Err: err}
 }
 
-func (m Model) loadMails(mailbox models.Mailbox) tea.Cmd {
+func (m Model) refreshMails(mailbox models.Mailbox) tea.Cmd {
 	return func() tea.Msg {
 		var mails []models.Mail
 
@@ -170,7 +170,7 @@ func (m Model) loadMails(mailbox models.Mailbox) tea.Cmd {
 			Where("mailbox_id = ?", mailbox.ID).
 			Scan(context.Background())
 
-		return home.MailsUpdateMsg{
+		return home.MailsRefreshedMsg{
 			Mailbox: mailbox,
 			Mails:   mails,
 			Err:     err,
