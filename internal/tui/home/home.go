@@ -211,7 +211,10 @@ func (m Model) View() string {
 			utils.
 				Box(m.mails.Width(), m.mails.Height(), false, false).
 				Foreground(colors.Gray).
-				Render(fmt.Sprintf("no mails in %s, incoming mails are only stored for 48h", "mailbox@localhost")),
+				Render(fmt.Sprintf(
+					"no mails in %s, incoming mails are only stored for 48h",
+					m.SelectedMailbox.Email(),
+				)),
 		)
 	} else {
 		mails = m.mails.View()
