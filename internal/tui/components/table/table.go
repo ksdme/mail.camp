@@ -427,7 +427,7 @@ func (m *Model) renderRow(r int) string {
 	var cellStyle lipgloss.Style
 	if m.styleFunc != nil {
 		cellStyle = m.styleFunc(r)
-		if r == m.cursor {
+		if r == m.cursor && m.Focused() {
 			cellStyle = cellStyle.UnsetForeground().Inherit(m.styles.Selected)
 		}
 	} else {
@@ -447,7 +447,7 @@ func (m *Model) renderRow(r int) string {
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, s...)
 
-	if r == m.cursor {
+	if r == m.cursor && m.Focused() {
 		return m.styles.Selected.Render(row)
 	}
 
