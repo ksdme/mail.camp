@@ -161,6 +161,7 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 
 func runCleanupWorker(db *bun.DB, wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	for {
 		models.CleanupMails(context.Background(), db)
 		time.Sleep(time.Hour)
