@@ -22,6 +22,7 @@ import (
 	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui"
 	"github.com/ksdme/mail/internal/tui/colors"
+	"github.com/ksdme/mail/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
@@ -39,7 +40,17 @@ func main() {
 	}
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 
-	// Start servers and workers.
+	// Create the database tables if needed.
+	// TODO: Have an actual migration system.
+	if config.Settings.DBMigrate {
+		slog.Info("creating tables")
+		ctx := context.Background()
+		utils.MustExec(db.NewCreateTable().Model(&models.Account{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&models.Mailbox{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&models.Mail{}).Exec(ctx))
+	}
+
+	// Start the servers and workers.
 	var wg sync.WaitGroup
 
 	wg.Add(3)
@@ -166,4 +177,11 @@ func runCleanupWorker(db *bun.DB, wg *sync.WaitGroup) {
 		models.CleanupMails(context.Background(), db)
 		time.Sleep(time.Hour)
 	}
+}
+
+func must(result sql.Result, err error) sql.Result {
+	if err != nil {
+		log.Panicf("could not run query: %v", err)
+	}
+	return result
 }

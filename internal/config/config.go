@@ -7,9 +7,10 @@ import (
 type settings struct {
 	Debug bool `envDefault:"true"`
 
-	DBURI  string `env:"DB_URI" envDefault:"file:db.sqlite3"`
-	MXHost string `env:"MX_HOST" envDefault:"localhost"`
+	DBURI     string `env:"DB_URI" envDefault:"file:db.sqlite3"`
+	DBMigrate bool   `env:"DB_MIGRATE"`
 
+	MXHost       string `env:"MX_HOST" envDefault:"localhost"`
 	SMTPBindAddr string `env:"SMTP_BIND_ADDR" envDefault:"127.0.0.1:1025"`
 
 	SSHBindAddr           string `env:"SSH_BIND_ADDR" envDefault:"127.0.0.1:2222"`
