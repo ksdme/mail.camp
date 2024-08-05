@@ -36,18 +36,19 @@ type Model struct {
 	height int
 
 	KeyMap KeyMap
+	Colors colors.ColorPalette
 
 	quitting bool
 }
 
-func NewModel(db *bun.DB, account models.Account) Model {
+func NewModel(db *bun.DB, account models.Account, colors colors.ColorPalette) Model {
 	return Model{
 		db:      db,
 		account: account,
 
 		mode:  Home,
-		home:  home.NewModel(),
-		email: email.NewModel(),
+		home:  home.NewModel(colors),
+		email: email.NewModel(colors),
 
 		KeyMap: DefaultKeyMap(),
 	}
@@ -102,11 +103,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case email.MailSelectedMsg:
 		m.mode = Email
 		m.email, cmd = m.email.Update(msg)
-		return m, tea.Batch(tea.ClearScreen, cmd)
+		return m, cmd
 
 	case email.MailDismissMsg:
 		m.mode = Home
-		return m, tea.ClearScreen
+		return m, nil
 	}
 
 	if m.mode == Home {
@@ -142,7 +143,7 @@ func (m Model) View() string {
 			lipgloss.
 				NewStyle().
 				PaddingLeft(gap).
-				Foreground(colors.Gray).
+				Foreground(m.Colors.Muted).
 				Render(config.Signature),
 		)
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ksdme/mail/internal/tui/colors"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -118,7 +117,7 @@ type Styles struct {
 // DefaultStyles returns a set of default style definitions for this table.
 func DefaultStyles() Styles {
 	return Styles{
-		Selected: lipgloss.NewStyle().Bold(true).Foreground(colors.Accent),
+		Selected: lipgloss.NewStyle().Bold(true),
 		Header:   lipgloss.NewStyle().Bold(true),
 		Cell:     lipgloss.NewStyle(),
 	}

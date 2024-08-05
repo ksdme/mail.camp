@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
+	"github.com/ksdme/mail/internal/tui/colors"
 )
 
 type MailSelectedMsg struct {
@@ -23,19 +24,23 @@ type Model struct {
 
 	Width  int
 	Height int
+
+	Colors colors.ColorPalette
 	KeyMap KeyMap
 }
 
-func NewModel() Model {
-	initialWidth := 64
-	initialHeight := 64
+func NewModel(colors colors.ColorPalette) Model {
+	width := 64
+	height := 64
 
 	return Model{
-		viewport: viewport.New(initialWidth, initialHeight),
+		viewport: viewport.New(width, height),
 
-		Width:  initialWidth,
-		Height: initialHeight,
+		Width:  width,
+		Height: height,
+
 		KeyMap: DefaultKeyMap(),
+		Colors: colors,
 	}
 }
 
@@ -58,7 +63,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case MailSelectedMsg:
 		m.viewport.SetContent(m.makeContent(msg.Mailbox, msg.Mail))
 		m.viewport.SetYOffset(0)
-		return m, tea.ClearScreen
+		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -71,10 +76,14 @@ func (m Model) View() string {
 }
 
 func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
-	labelStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
+	labelStyle := lipgloss.
+		NewStyle().
+		Foreground(m.Colors.Muted).
 		PaddingRight(1)
-	valueStyle := lipgloss.NewStyle()
+
+	valueStyle := lipgloss.
+		NewStyle().
+		Foreground(m.Colors.Text)
 
 	from := mail.FromAddress
 	if len(mail.FromName) > 0 {

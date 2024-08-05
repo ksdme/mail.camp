@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ksdme/mail/internal/tui/colors"
 )
 
 // An item in the picker list.
@@ -188,17 +187,19 @@ func (m Model) View() string {
 		line := lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			legend,
-			lipgloss.NewStyle().Render(" "),
+			lipgloss.NewStyle().Width(1).Render(),
 			label,
 		)
 
 		if len(item.Badge) != 0 {
 			badge := m.Styles.Badge.Render(item.Badge)
-			space := m.Width - lipgloss.Width(line) - lipgloss.Width(badge)
 			line = lipgloss.JoinHorizontal(
 				lipgloss.Bottom,
 				line,
-				lipgloss.NewStyle().Width(space).Render(),
+				lipgloss.
+					NewStyle().
+					Width(m.Width-lipgloss.Width(line)-lipgloss.Width(badge)).
+					Render(),
 				badge,
 			)
 		}
@@ -222,11 +223,11 @@ type Styles struct {
 
 func DefaultStyles() Styles {
 	return Styles{
-		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2).Foreground(colors.Gray),
-		Badge:          lipgloss.NewStyle().Foreground(colors.Gray),
+		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2),
+		Badge:          lipgloss.NewStyle(),
 		Regular:        lipgloss.NewStyle(),
-		SelectedLegend: lipgloss.NewStyle().Foreground(colors.Accent).Bold(true),
-		Highlighted:    lipgloss.NewStyle().Foreground(colors.Accent),
+		SelectedLegend: lipgloss.NewStyle().Bold(true),
+		Highlighted:    lipgloss.NewStyle(),
 	}
 }
 

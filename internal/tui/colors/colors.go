@@ -2,7 +2,16 @@ package colors
 
 import "github.com/charmbracelet/lipgloss"
 
-const (
-	Gray   = lipgloss.Color("244")
-	Accent = lipgloss.Color("212")
-)
+type ColorPalette struct {
+	Accent lipgloss.Color
+	Muted  lipgloss.Color
+	Text   lipgloss.Color
+}
+
+func DefaultColorPalette() ColorPalette {
+	return ColorPalette{
+		Accent: lipgloss.Color("212"),
+		Muted:  lipgloss.Color("244"),
+		Text:   lipgloss.Color("255"),
+	}
+}

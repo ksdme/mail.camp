@@ -42,46 +42,45 @@ type Model struct {
 
 	Width  int
 	Height int
+
+	Colors colors.ColorPalette
 	KeyMap KeyMap
 
 	SelectedMailbox models.Mailbox
 }
 
-func NewModel() Model {
-	initialWidth := 80
-	initialHeight := 80
+func NewModel(colors colors.ColorPalette) Model {
+	width := 80
+	height := 80
 
 	// Setup the mails picker.
-	mailboxes := picker.NewModel(
-		"Mailboxes",
-		[]picker.Item{},
-		initialWidth/3,
-		initialHeight,
-	)
+	pStyles := picker.DefaultStyles()
+	pStyles.Title = pStyles.Title.Foreground(colors.Muted)
+	pStyles.Badge = pStyles.Badge.Foreground(colors.Muted)
+	pStyles.Regular = pStyles.Regular.Foreground(colors.Text)
+	pStyles.Highlighted = pStyles.Highlighted.Foreground(colors.Accent)
+	pStyles.SelectedLegend = pStyles.SelectedLegend.Foreground(colors.Accent)
+	mailboxes := picker.NewModel("Mailboxes", []picker.Item{}, width/3, height)
+	mailboxes.Styles = pStyles
 	mailboxes.Focus()
 
 	// Setup the mails table.
-	styles := table.DefaultStyles()
-	styles.Header = lipgloss.NewStyle().Height(2).Foreground(colors.Gray)
+	tStyles := table.DefaultStyles()
+	tStyles.Header = lipgloss.NewStyle().Height(2).Foreground(colors.Muted)
+	tStyles.Selected = tStyles.Selected.Foreground(colors.Accent)
 	table := table.New(
-		table.WithColumns(makeMailTableColumns(initialWidth*2/3)),
-		table.WithHeight(initialHeight),
+		table.WithColumns(makeMailTableColumns(width*2/3)),
+		table.WithHeight(height),
 		table.WithRows([]table.Row{}),
-		table.WithStyles(styles),
-		table.WithStyleFunc(func(row int) lipgloss.Style {
-			if row > 6 {
-				return mailboxes.Styles.SelectedLegend
-			}
-			return styles.Cell
-		}),
+		table.WithStyles(tStyles),
 	)
 
 	return Model{
 		mailboxes: mailboxes,
 		mails:     table,
 
-		Width:  initialWidth,
-		Height: initialHeight,
+		Width:  width,
+		Height: height,
 		KeyMap: DefaultKeyMap(),
 	}
 }
@@ -206,14 +205,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	if !m.mailboxes.HasItems() {
-		return utils.
-			Box(m.Width, m.Height, true, true).
-			Foreground(colors.Gray).
+		return lipgloss.
+			NewStyle().
+			Width(m.Width).
+			Height(m.Height).
+			AlignHorizontal(lipgloss.Center).
+			AlignVertical(lipgloss.Center).
+			Foreground(m.Colors.Muted).
 			Render("no mailboxes :(")
 	}
 
 	mailboxes := lipgloss.NewStyle().
 		PaddingRight(6).
+		Foreground(m.Colors.Text).
 		Render(m.mailboxes.View())
 
 	var mails string
@@ -223,7 +227,7 @@ func (m Model) View() string {
 			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
 			utils.
 				Box(m.mails.Width(), m.mails.Height(), false, false).
-				Foreground(colors.Gray).
+				Foreground(m.Colors.Muted).
 				Render(fmt.Sprintf(
 					"no mails in %s, incoming mails are only stored for 48h",
 					m.SelectedMailbox.Email(),
