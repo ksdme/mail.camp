@@ -13,6 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
+	"github.com/charmbracelet/wish/activeterm"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/backend"
@@ -85,22 +86,54 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 	}
 
 	options = append(options, wish.WithMiddleware(
+		// Run the bubbletea program.
 		bubbletea.Middleware(func(session ssh.Session) (tea.Model, []tea.ProgramOption) {
-			account, err := models.GetOrCreateAccountFromPublicKey(
-				session.Context(),
-				db,
-				session.PublicKey(),
-			)
-			if err != nil {
-				io.WriteString(session, err.Error()+"\n")
-				return nil, nil
-			}
-
+			account := session.Context().Value("account").(models.Account)
 			// TODO: We should adjust the color palette based on term color.
-			model := tui.NewModel(db, *account, colors.DefaultColorPalette())
+			model := tui.NewModel(db, account, colors.DefaultColorPalette())
 			options := []tea.ProgramOption{tea.WithAltScreen()}
 			return model, options
 		}),
+
+		// Resolve the account.
+		func(next ssh.Handler) ssh.Handler {
+			return func(session ssh.Session) {
+				account, err := models.GetOrCreateAccountFromPublicKey(
+					session.Context(),
+					db,
+					session.PublicKey(),
+				)
+				if err != nil {
+					io.WriteString(session, err.Error()+"\n")
+					return
+				}
+
+				session.Context().SetValue("account", *account)
+				next(session)
+			}
+		},
+
+		// Log the request.
+		func(next ssh.Handler) ssh.Handler {
+			return func(s ssh.Session) {
+				at := time.Now()
+				slog.Info("client connected",
+					"at", at,
+					"user", s.User(),
+					"client", s.Context().ClientVersion(),
+				)
+				next(s)
+				slog.Info(
+					"client disconnected",
+					"user", s.User(),
+					"alive", time.Since(at),
+					"at", at,
+				)
+			}
+		},
+
+		// Only allow active terminals.
+		activeterm.Middleware(),
 	))
 
 	server, err := wish.NewServer(options...)
