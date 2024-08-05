@@ -1,22 +1,19 @@
 ### Pending
 
-TUI
-- Show all mailboxes
-- Show all mail
-- Ask for prefix reservation
-- Create mailbox
-- Delete mailbox
+General
+- Create account with prefix reservation
+- Create mailbox with reserved prefix
 - Delete mail
 - Mark mail as important
-
-General
-- Create account with username
-- Create mailboxes
 - TLS on the domain
 - Verify incoming messages using SPF and DKIM
 
 MVP
 - Unread mail badge
+- docker configuration
+- Text not being displayed in email body
+- help pane signature is of the wrong color
+- MX DNS
 
 Done
 - Delete mailbox
