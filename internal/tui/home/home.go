@@ -224,8 +224,10 @@ func (m Model) View() string {
 		mails = lipgloss.JoinVertical(
 			lipgloss.Top,
 			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
-			utils.
-				Box(m.mails.Width(), m.mails.Height(), false, false).
+			lipgloss.
+				NewStyle().
+				Width(m.mails.Width()).
+				Height(m.mails.Height()).
 				Foreground(m.Colors.Muted).
 				Render(fmt.Sprintf(
 					"no mails in %s, incoming mails are only stored for 48h",

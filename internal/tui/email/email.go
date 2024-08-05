@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui/colors"
+	"github.com/ksdme/mail/internal/utils"
 )
 
 type MailSelectedMsg struct {
@@ -104,7 +105,7 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 	subject := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		labelStyle.Render("Subject"),
-		valueStyle.Render(mail.Subject),
+		valueStyle.Render(utils.Decode(mail.Subject)),
 	)
 
 	created := lipgloss.JoinHorizontal(
@@ -115,7 +116,7 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 
 	text := valueStyle.
 		MarginTop(1).
-		Render(mail.Text)
+		Render(utils.Decode(mail.Text))
 
 	return lipgloss.JoinVertical(
 		lipgloss.Top,
