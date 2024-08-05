@@ -1,12 +1,9 @@
 version: "3"
 
 tasks:
-  serve:
-    cmds:
-      - go run cmd/server/main.go
   migrate:
     cmds:
       - go run cmd/migrate/main.go
-  tea:
+  docker:
     cmds:
-      - go run cmd/tui/main.go
+      - docker build .

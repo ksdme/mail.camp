@@ -1,5 +1,11 @@
 ### Pending
 
+MVP
+- Unread mail badge
+- React to system signals
+- MX DNS
+- Docker build
+
 General
 - Create account with prefix reservation
 - Create mailbox with reserved prefix
@@ -8,13 +14,6 @@ General
 - TLS on the domain
 - Verify incoming messages using SPF and DKIM
 
-MVP
-- Unread mail badge
-- docker configuration
-- Text not being displayed in email body
-- help pane signature is of the wrong color
-- MX DNS
-
 Done
 - Delete mailbox
 - Add signature
@@ -22,3 +21,8 @@ Done
 - SSH integration
 - Auto clean up mail
 - Realtime update
+- Text not being displayed in email body
+- Help pane signature is of the wrong color
+- Dynamic configuration
+- Migrate automatically
+- docker configuration
