@@ -29,11 +29,11 @@ import (
 )
 
 func main() {
-	if config.DevBuild {
+	if config.Settings.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	sqldb, err := sql.Open("sqlite3", config.DbURI)
+	sqldb, err := sql.Open("sqlite3", config.Settings.DBURI)
 	if err != nil {
 		log.Panicf("opening db failed: %v", err)
 	}
@@ -54,10 +54,10 @@ func runMailServer(db *bun.DB, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	server := smtp.NewServer(backend.NewBackend(db))
-	server.Addr = config.SMTPBindAddr
-	server.Domain = config.MxHost
+	server.Addr = config.Settings.SMTPBindAddr
+	server.Domain = config.Settings.MXHost
 
-	slog.Info("starting smtp server", "at", config.SMTPBindAddr)
+	slog.Info("starting smtp server", "at", config.Settings.SMTPBindAddr)
 	if err := server.ListenAndServe(); err != nil {
 		slog.Error("failed serving smtp server", "err", err)
 	}
@@ -67,19 +67,19 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	options := []ssh.Option{
-		wish.WithAddress(config.SSHBindAddr),
-		wish.WithHostKeyPath(config.SSHHostKeyPath),
+		wish.WithAddress(config.Settings.SSHBindAddr),
+		wish.WithHostKeyPath(config.Settings.SSHHostKeyPath),
 	}
 
-	if config.SSHAuthorizedKeysPath == "" {
+	if config.Settings.SSHAuthorizedKeysPath == "" {
 		options = append(options, wish.WithPublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
 			return true
 		}))
 	} else {
-		if _, err := os.Stat(config.SSHAuthorizedKeysPath); err != nil {
+		if _, err := os.Stat(config.Settings.SSHAuthorizedKeysPath); err != nil {
 			panic(errors.Wrap(err, "could not stat authorized_keys file"))
 		}
-		options = append(options, wish.WithAuthorizedKeys(config.SSHAuthorizedKeysPath))
+		options = append(options, wish.WithAuthorizedKeys(config.Settings.SSHAuthorizedKeysPath))
 	}
 
 	options = append(options, wish.WithMiddleware(
@@ -153,7 +153,7 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 		slog.Error("failed creating ssh server", "err", err)
 	}
 
-	slog.Info("starting ssh server", "at", config.SSHBindAddr)
+	slog.Info("starting ssh server", "at", config.Settings.SSHBindAddr)
 	if err = server.ListenAndServe(); err != nil {
 		slog.Error("failed serving ssh connections", "err", err)
 	}

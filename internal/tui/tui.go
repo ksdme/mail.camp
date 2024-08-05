@@ -153,7 +153,7 @@ func (m Model) View() string {
 	}
 
 	bottom := help.View(m.Help(), m.Colors)
-	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Signature) - 12
+	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Settings.Signature) - 12
 	if gap > 8 {
 		bottom = lipgloss.JoinHorizontal(
 			lipgloss.Left,
@@ -162,7 +162,7 @@ func (m Model) View() string {
 				NewStyle().
 				PaddingLeft(gap).
 				Foreground(m.Colors.Muted).
-				Render(config.Signature),
+				Render(config.Settings.Signature),
 		)
 	}
 

@@ -51,7 +51,7 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) error {
 	s.from = address
 
 	host := strings.Split(address.Address, "@")[1]
-	if host == config.MxHost {
+	if host == config.Settings.MXHost {
 		return fmt.Errorf("outgoing email not supported")
 	}
 
@@ -72,7 +72,7 @@ func (s *session) Rcpt(to string, opts *smtp.RcptOptions) error {
 		return errors.Wrap(err, "could not parse recipient address")
 	}
 
-	host := fmt.Sprintf("@%s", config.MxHost)
+	host := fmt.Sprintf("@%s", config.Settings.MXHost)
 	if !strings.HasSuffix(recipient.Address, host) {
 		return fmt.Errorf("unrecognized domain: %v", recipient.Address)
 	}
