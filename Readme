@@ -14,3 +14,14 @@ General
 - Create mailboxes
 - TLS on the domain
 - Verify incoming messages using SPF and DKIM
+
+MVP
+- Unread mail badge
+
+Done
+- Delete mailbox
+- Add signature
+- Age
+- SSH integration
+- Auto clean up mail
+- Realtime update

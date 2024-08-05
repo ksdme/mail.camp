@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/emersion/go-smtp"
+	"github.com/ksdme/mail/internal/bus"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/pkg/errors"
@@ -121,6 +122,11 @@ func (s *session) Data(r io.Reader) error {
 				"added mail to mailbox",
 				"from", s.from.Address,
 				"mailbox", mailbox.ID,
+			)
+
+			bus.MailboxContentsUpdatedSignal.Emit(
+				mailbox.AccountID,
+				mailbox.ID,
 			)
 		}
 	}

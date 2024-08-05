@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/backend"
+	"github.com/ksdme/mail/internal/bus"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui"
@@ -41,13 +42,9 @@ func main() {
 	// Start servers and workers.
 	var wg sync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(3)
 	go runSSHServer(db, &wg)
-
-	wg.Add(1)
 	go runMailServer(db, &wg)
-
-	wg.Add(1)
 	go runCleanupWorker(db, &wg)
 
 	wg.Wait()
@@ -110,6 +107,9 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 
 				session.Context().SetValue("account", *account)
 				next(session)
+
+				bus.MailboxContentsUpdatedSignal.CleanUp(account.ID)
+				slog.Debug("cleaning up mailbox signals", "account", account.ID)
 			}
 		},
 

@@ -3,10 +3,12 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/bus"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/models"
 	"github.com/ksdme/mail/internal/tui/colors"
@@ -15,6 +17,10 @@ import (
 	"github.com/ksdme/mail/internal/tui/home"
 	"github.com/uptrace/bun"
 )
+
+type mailboxRealTimeUpdate struct {
+	mailbox int64
+}
 
 type mode int
 
@@ -59,6 +65,7 @@ func (m Model) Init() tea.Cmd {
 		m.home.Init(),
 		m.email.Init(),
 		m.refreshMailboxes,
+		m.listenToMailboxUpdate,
 	)
 }
 
@@ -86,6 +93,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 		}
+
+	case mailboxRealTimeUpdate:
+		slog.Debug("received mailbox update", "mailbox", msg.mailbox)
+		if msg.mailbox == m.home.SelectedMailbox.ID {
+			return m, tea.Batch(
+				m.refreshMails(m.home.SelectedMailbox),
+				m.listenToMailboxUpdate,
+			)
+		}
+		return m, m.listenToMailboxUpdate
 
 	case home.MailboxesRefreshedMsg:
 		m.home, cmd = m.home.Update(msg)
@@ -201,6 +218,15 @@ func (m Model) refreshMails(mailbox models.Mailbox) tea.Cmd {
 			Err:     err,
 		}
 	}
+}
+
+func (m Model) listenToMailboxUpdate() tea.Msg {
+	slog.Debug("listening to mailbox updates", "account", m.account.ID)
+	if value, aborted := bus.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
+		return mailboxRealTimeUpdate{value}
+	}
+
+	return nil
 }
 
 func (m Model) createRandomMailbox() tea.Msg {
