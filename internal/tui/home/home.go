@@ -149,7 +149,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				ID:    int(mailbox.ID),
 				Label: mailbox.Email(),
 				Value: mailbox,
-				Badge: "2",
 			})
 		}
 		m.mailboxes.SetItems(items)
