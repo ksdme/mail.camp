@@ -57,6 +57,7 @@ func NewModel(db *bun.DB, account models.Account, colors colors.ColorPalette) Mo
 		email: email.NewModel(colors),
 
 		KeyMap: DefaultKeyMap(),
+		Colors: colors,
 	}
 }
 
@@ -151,7 +152,7 @@ func (m Model) View() string {
 		content = m.email.View()
 	}
 
-	bottom := help.View(m.Help())
+	bottom := help.View(m.Help(), m.Colors)
 	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Signature) - 12
 	if gap > 8 {
 		bottom = lipgloss.JoinHorizontal(

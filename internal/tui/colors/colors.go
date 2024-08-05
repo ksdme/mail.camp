@@ -15,3 +15,11 @@ func DefaultColorPalette() ColorPalette {
 		Text:   lipgloss.Color("255"),
 	}
 }
+
+func DefaultLightColorPalette() ColorPalette {
+	return ColorPalette{
+		Accent: lipgloss.Color("57"),
+		Muted:  lipgloss.Color("243"),
+		Text:   lipgloss.Color("234"),
+	}
+}

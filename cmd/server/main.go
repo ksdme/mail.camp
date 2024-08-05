@@ -85,9 +85,21 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 	options = append(options, wish.WithMiddleware(
 		// Run the bubbletea program.
 		bubbletea.Middleware(func(session ssh.Session) (tea.Model, []tea.ProgramOption) {
+			renderer := bubbletea.MakeRenderer(session)
+			slog.Info(
+				"client configured with",
+				"color-profile", renderer.ColorProfile(),
+				"has-dark-background", renderer.HasDarkBackground(),
+			)
+
+			// TODO: We should adjust the color palette based on color profile.
+			palette := colors.DefaultColorPalette()
+			if !renderer.HasDarkBackground() {
+				palette = colors.DefaultLightColorPalette()
+			}
+
 			account := session.Context().Value("account").(models.Account)
-			// TODO: We should adjust the color palette based on term color.
-			model := tui.NewModel(db, account, colors.DefaultColorPalette())
+			model := tui.NewModel(db, account, palette)
 			options := []tea.ProgramOption{tea.WithAltScreen()}
 			return model, options
 		}),

@@ -3,20 +3,19 @@ package help
 import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/tui/colors"
 )
 
-func View(bindings []key.Binding) string {
+func View(bindings []key.Binding, colors colors.ColorPalette) string {
 	keyStyle := lipgloss.
 		NewStyle().
+		Foreground(colors.Text).
 		PaddingRight(1)
 
 	descStyle := lipgloss.
 		NewStyle().
-		PaddingRight(3).
-		Foreground(lipgloss.AdaptiveColor{
-			Light: "#909090",
-			Dark:  "#626262",
-		})
+		Foreground(colors.Muted).
+		PaddingRight(3)
 
 	items := []string{}
 	for _, binding := range bindings {
