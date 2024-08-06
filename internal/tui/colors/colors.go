@@ -8,18 +8,18 @@ type ColorPalette struct {
 	Text   lipgloss.Color
 }
 
-func DefaultColorPalette() ColorPalette {
+func DefaultColorDarkPalette() ColorPalette {
 	return ColorPalette{
-		Accent: lipgloss.Color("212"),
-		Muted:  lipgloss.Color("244"),
-		Text:   lipgloss.Color("255"),
+		Accent: lipgloss.Color("9"),
+		Muted:  lipgloss.Color("8"),
+		Text:   lipgloss.Color("15"),
 	}
 }
 
 func DefaultLightColorPalette() ColorPalette {
 	return ColorPalette{
-		Accent: lipgloss.Color("57"),
-		Muted:  lipgloss.Color("243"),
-		Text:   lipgloss.Color("234"),
+		Accent: lipgloss.Color("9"),
+		Muted:  lipgloss.Color("8"),
+		Text:   lipgloss.Color("0"),
 	}
 }

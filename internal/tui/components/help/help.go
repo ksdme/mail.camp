@@ -6,13 +6,13 @@ import (
 	"github.com/ksdme/mail/internal/tui/colors"
 )
 
-func View(bindings []key.Binding, colors colors.ColorPalette) string {
-	keyStyle := lipgloss.
+func View(bindings []key.Binding, renderer *lipgloss.Renderer, colors colors.ColorPalette) string {
+	keyStyle := renderer.
 		NewStyle().
 		Foreground(colors.Text).
 		PaddingRight(1)
 
-	descStyle := lipgloss.
+	descStyle := renderer.
 		NewStyle().
 		Foreground(colors.Muted).
 		PaddingRight(3)

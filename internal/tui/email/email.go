@@ -26,11 +26,12 @@ type Model struct {
 	Width  int
 	Height int
 
-	Colors colors.ColorPalette
-	KeyMap KeyMap
+	KeyMap   KeyMap
+	Renderer *lipgloss.Renderer
+	Colors   colors.ColorPalette
 }
 
-func NewModel(colors colors.ColorPalette) Model {
+func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	width := 64
 	height := 64
 
@@ -40,8 +41,9 @@ func NewModel(colors colors.ColorPalette) Model {
 		Width:  width,
 		Height: height,
 
-		KeyMap: DefaultKeyMap(),
-		Colors: colors,
+		KeyMap:   DefaultKeyMap(),
+		Renderer: renderer,
+		Colors:   colors,
 	}
 }
 
@@ -77,12 +79,12 @@ func (m Model) View() string {
 }
 
 func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
-	labelStyle := lipgloss.
+	labelStyle := m.Renderer.
 		NewStyle().
 		Foreground(m.Colors.Muted).
 		PaddingRight(1)
 
-	valueStyle := lipgloss.
+	valueStyle := m.Renderer.
 		NewStyle().
 		Foreground(m.Colors.Text)
 

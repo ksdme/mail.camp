@@ -1,9 +1,9 @@
 version: "3"
 
 tasks:
-  migrate:
+  serve:
     cmds:
-      - go run cmd/migrate/main.go
+      - go run cmd/server/main.go
   docker-build:
     cmds:
       - docker build . -t mail-camp

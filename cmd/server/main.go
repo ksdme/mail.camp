@@ -24,6 +24,7 @@ import (
 	"github.com/ksdme/mail/internal/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/muesli/termenv"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
@@ -95,25 +96,26 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 
 	options = append(options, wish.WithMiddleware(
 		// Run the bubbletea program.
-		bubbletea.Middleware(func(session ssh.Session) (tea.Model, []tea.ProgramOption) {
+		bubbletea.MiddlewareWithColorProfile(func(session ssh.Session) (tea.Model, []tea.ProgramOption) {
+			pty, _, _ := session.Pty()
 			renderer := bubbletea.MakeRenderer(session)
 			slog.Info(
 				"client configured with",
-				"color-profile", renderer.ColorProfile(),
+				"term", pty.Term,
 				"has-dark-background", renderer.HasDarkBackground(),
 			)
 
 			// TODO: We should adjust the color palette based on color profile.
-			palette := colors.DefaultColorPalette()
+			palette := colors.DefaultColorDarkPalette()
 			if !renderer.HasDarkBackground() {
 				palette = colors.DefaultLightColorPalette()
 			}
 
 			account := session.Context().Value("account").(models.Account)
-			model := tui.NewModel(db, account, palette)
+			model := tui.NewModel(db, account, renderer, palette)
 			options := []tea.ProgramOption{tea.WithAltScreen()}
 			return model, options
-		}),
+		}, termenv.ANSI),
 
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {

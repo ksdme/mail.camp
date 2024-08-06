@@ -43,18 +43,19 @@ type Model struct {
 	Width  int
 	Height int
 
-	Colors colors.ColorPalette
-	KeyMap KeyMap
+	KeyMap   KeyMap
+	Renderer *lipgloss.Renderer
+	Colors   colors.ColorPalette
 
 	SelectedMailbox models.Mailbox
 }
 
-func NewModel(colors colors.ColorPalette) Model {
+func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	width := 80
 	height := 80
 
 	// Setup the mails picker.
-	pStyles := picker.DefaultStyles()
+	pStyles := picker.DefaultStyles(renderer)
 	pStyles.Title = pStyles.Title.Foreground(colors.Muted)
 	pStyles.Badge = pStyles.Badge.Foreground(colors.Muted)
 	pStyles.Regular = pStyles.Regular.Foreground(colors.Text)
@@ -65,8 +66,8 @@ func NewModel(colors colors.ColorPalette) Model {
 	mailboxes.Focus()
 
 	// Setup the mails table.
-	tStyles := table.DefaultStyles()
-	tStyles.Header = lipgloss.NewStyle().Height(2).Foreground(colors.Muted)
+	tStyles := table.DefaultStyles(renderer)
+	tStyles.Header = renderer.NewStyle().Height(2).Foreground(colors.Muted)
 	tStyles.Selected = tStyles.Selected.Foreground(colors.Accent)
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(width*2/3)),
@@ -81,7 +82,10 @@ func NewModel(colors colors.ColorPalette) Model {
 
 		Width:  width,
 		Height: height,
-		KeyMap: DefaultKeyMap(),
+
+		KeyMap:   DefaultKeyMap(),
+		Renderer: renderer,
+		Colors:   colors,
 	}
 }
 
@@ -204,7 +208,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	if !m.mailboxes.HasItems() {
-		return lipgloss.
+		return m.Renderer.
 			NewStyle().
 			Width(m.Width).
 			Height(m.Height).
@@ -214,7 +218,8 @@ func (m Model) View() string {
 			Render("no mailboxes :(")
 	}
 
-	mailboxes := lipgloss.NewStyle().
+	mailboxes := m.Renderer.
+		NewStyle().
 		PaddingRight(6).
 		Foreground(m.Colors.Text).
 		Render(m.mailboxes.View())
@@ -223,12 +228,16 @@ func (m Model) View() string {
 	if !m.mails.HasRows() {
 		mails = lipgloss.JoinVertical(
 			lipgloss.Top,
-			m.mailboxes.Styles.Title.PaddingLeft(0).Render("Mails"),
-			lipgloss.
+			m.mailboxes.
+				Styles.
+				Title.
+				PaddingLeft(0).
+				Render("Mails"),
+			m.Renderer.
 				NewStyle().
 				Width(m.mails.Width()).
 				Height(m.mails.Height()).
-				Foreground(m.Colors.Muted).
+				Foreground(m.Colors.Text).
 				Render(fmt.Sprintf(
 					"no mails in %s, incoming mails are only stored for 48h",
 					m.SelectedMailbox.Email(),

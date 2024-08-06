@@ -28,6 +28,7 @@ type Model struct {
 
 	Width  int
 	Height int
+
 	Styles Styles
 	KeyMap KeyMap
 }
@@ -43,7 +44,7 @@ func NewModel(title string, items []Item, width int, height int) Model {
 
 		Width:  width,
 		Height: height,
-		Styles: DefaultStyles(),
+		Styles: DefaultStyles(nil),
 		KeyMap: DefaultKeyMap(),
 	}
 }
@@ -221,13 +222,17 @@ type Styles struct {
 	Highlighted    lipgloss.Style
 }
 
-func DefaultStyles() Styles {
+func DefaultStyles(renderer *lipgloss.Renderer) Styles {
+	if renderer == nil {
+		renderer = lipgloss.DefaultRenderer()
+	}
+
 	return Styles{
-		Title:          lipgloss.NewStyle().PaddingLeft(2).Height(2),
-		Badge:          lipgloss.NewStyle(),
-		Regular:        lipgloss.NewStyle(),
-		SelectedLegend: lipgloss.NewStyle().Bold(true),
-		Highlighted:    lipgloss.NewStyle(),
+		Title:          renderer.NewStyle().PaddingLeft(2).Height(2),
+		Badge:          renderer.NewStyle(),
+		Regular:        renderer.NewStyle(),
+		SelectedLegend: renderer.NewStyle().Bold(true),
+		Highlighted:    renderer.NewStyle(),
 	}
 }
 

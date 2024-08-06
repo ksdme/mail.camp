@@ -41,23 +41,30 @@ type Model struct {
 	width  int
 	height int
 
-	KeyMap KeyMap
-	Colors colors.ColorPalette
+	KeyMap   KeyMap
+	Colors   colors.ColorPalette
+	Renderer *lipgloss.Renderer
 
 	quitting bool
 }
 
-func NewModel(db *bun.DB, account models.Account, colors colors.ColorPalette) Model {
+func NewModel(
+	db *bun.DB,
+	account models.Account,
+	renderer *lipgloss.Renderer,
+	colors colors.ColorPalette,
+) Model {
 	return Model{
 		db:      db,
 		account: account,
 
 		mode:  Home,
-		home:  home.NewModel(colors),
-		email: email.NewModel(colors),
+		home:  home.NewModel(renderer, colors),
+		email: email.NewModel(renderer, colors),
 
-		KeyMap: DefaultKeyMap(),
-		Colors: colors,
+		KeyMap:   DefaultKeyMap(),
+		Renderer: renderer,
+		Colors:   colors,
 	}
 }
 
@@ -152,13 +159,13 @@ func (m Model) View() string {
 		content = m.email.View()
 	}
 
-	bottom := help.View(m.Help(), m.Colors)
+	bottom := help.View(m.Help(), m.Renderer, m.Colors)
 	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Settings.Signature) - 12
 	if gap > 8 {
 		bottom = lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			bottom,
-			lipgloss.
+			m.Renderer.
 				NewStyle().
 				PaddingLeft(gap).
 				Foreground(m.Colors.Muted).
@@ -166,7 +173,7 @@ func (m Model) View() string {
 		)
 	}
 
-	return lipgloss.
+	return m.Renderer.
 		NewStyle().
 		Padding(2, 6).
 		Render(

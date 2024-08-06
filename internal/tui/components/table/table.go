@@ -115,11 +115,15 @@ type Styles struct {
 }
 
 // DefaultStyles returns a set of default style definitions for this table.
-func DefaultStyles() Styles {
+func DefaultStyles(renderer *lipgloss.Renderer) Styles {
+	if renderer == nil {
+		renderer = lipgloss.DefaultRenderer()
+	}
+
 	return Styles{
-		Selected: lipgloss.NewStyle(),
-		Header:   lipgloss.NewStyle(),
-		Cell:     lipgloss.NewStyle(),
+		Selected: renderer.NewStyle(),
+		Header:   renderer.NewStyle(),
+		Cell:     renderer.NewStyle(),
 	}
 }
 
@@ -141,7 +145,7 @@ func New(opts ...Option) Model {
 		viewport: viewport.New(0, 20),
 
 		KeyMap: DefaultKeyMap(),
-		styles: DefaultStyles(),
+		styles: DefaultStyles(nil),
 	}
 
 	for _, opt := range opts {
