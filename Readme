@@ -4,9 +4,9 @@ MVP
 - Unread mail badge
 - React to system signals
 - MX DNS
-- Docker build
 - Simple home page on ssh.camp
 - Simple home page on mail.ssh.camp
+- Term colors are missing
 
 General
 - Create account with prefix reservation
@@ -28,3 +28,4 @@ Done
 - Dynamic configuration
 - Migrate automatically
 - docker configuration
+- Docker build

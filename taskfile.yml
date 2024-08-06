@@ -4,6 +4,19 @@ tasks:
   migrate:
     cmds:
       - go run cmd/migrate/main.go
-  docker:
+  docker-build:
     cmds:
-      - docker build .
+      - docker build . -t mail-camp
+  docker-run:
+    cmds:
+      - |
+        docker run \
+          -p 1025:1025 \
+          -p 2222:2222 \
+          -v $HOME/.ssh/id_rsa:/app/id_rsa \
+          -e DEBUG=true \
+          -e DB_MIGRATE=true \
+          -e SMTP_BIND_ADDR=0.0.0.0:1025 \
+          -e SSH_BIND_ADDR=0.0.0.0:2222 \
+          -e SSH_HOST_KEY_PATH=/app/id_rsa \
+          mail-camp
