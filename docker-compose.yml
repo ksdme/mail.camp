@@ -10,10 +10,10 @@ services:
       - "MX_HOST=mail.ssh.camp"
       - "SMTP_BIND_ADDR=0.0.0.0:1025"
       - "SSH_BIND_ADDR=0.0.0.0:2222"
-      - "SSH_HOST_KEY_PATH=/ssh/id_rsa"
+      - "SSH_HOST_KEY_PATH=/ssh/id_ed25519"
     volumes:
       - "mail-ssh-camp-db:/data"
-      - "$HOME/.ssh/id_rsa:/ssh/id_rsa"
+      - "$HOME/.ssh/id_ed25519:/ssh/id_ed25519"
     ports:
       - "1025:1025"
       - "2222:2222"
