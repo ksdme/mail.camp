@@ -18,25 +18,26 @@ func RoundedAge(duration time.Duration) string {
 	year := 12 * month
 
 	if seconds/year >= 1 {
-		return text(seconds/year, "year")
+		return text(seconds/year, "yr", "yrs")
 	} else if seconds/month >= 1 {
-		return text(seconds/month, "month")
+		return text(seconds/month, "month", "months")
 	} else if seconds/week >= 1 {
-		return text(seconds/week, "week")
+		return text(seconds/week, "wk", "wks")
 	} else if seconds/day >= 1 {
-		return text(seconds/day, "day")
+		return text(seconds/day, "d", "d")
 	} else if seconds/hour >= 1 {
-		return text(seconds/hour, "hour")
+		return text(seconds/hour, "h", "h")
 	} else if seconds/minutes >= 1 {
-		return text(seconds/minutes, "minute")
+		return text(seconds/minutes, "m", "h")
 	}
 
-	return text(seconds, "second")
+	return text(seconds, "s", "s")
 }
 
-func text(value float64, suffix string) string {
+func text(value float64, singular string, plural string) string {
+	suffix := singular
 	if value >= 2 {
-		suffix += "s"
+		suffix = plural
 	}
-	return fmt.Sprintf("%d %s", int(value), suffix)
+	return fmt.Sprintf("%d%s", int(value), suffix)
 }

@@ -334,7 +334,7 @@ func DefaultKeyMap() KeyMap {
 }
 
 func makeMailTableColumns(width int) []table.Column {
-	at := width * 2 / 10
+	at := width * 1 / 10
 	from := (width * 3) / 10
 	return []table.Column{
 		{Title: "Subject", Width: width - at - from},
