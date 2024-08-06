@@ -15,8 +15,8 @@ services:
       - "mail-ssh-camp-db:/data"
       - "$HOME/.ssh/id_ed25519:/ssh/id_ed25519"
     ports:
-      - "1025:1025"
-      - "25:2222"
+      - "25:1025"
+      - "2222:2222"
 
 volumes:
   mail-ssh-camp-db:
