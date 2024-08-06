@@ -28,7 +28,7 @@ func RoundedAge(duration time.Duration) string {
 	} else if seconds/hour >= 1 {
 		return text(seconds/hour, "h", "h")
 	} else if seconds/minutes >= 1 {
-		return text(seconds/minutes, "m", "h")
+		return text(seconds/minutes, "m", "m")
 	}
 
 	return text(seconds, "s", "s")
