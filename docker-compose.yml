@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   mail-camp:
     image: mail-ssh-camp
