@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+  mail-camp:
+    image: mail-ssh-camp
+    environment:
+      - "DEBUG=true"
+      - "DB_URI=file:/data/db.sqlite3"
+      - "DB_MIGRATE=false"
+      - "MX_HOST=mail.ssh.camp"
+      - "SMTP_BIND_ADDR=0.0.0.0:1025"
+      - "SSH_BIND_ADDR=0.0.0.0:2222"
+      - "SSH_HOST_KEY_PATH=/ssh/id_rsa"
+    volumes:
+      - "db:/data"
+      - "$HOME/.ssh/id_rsa:/ssh/id_rsa"
+    ports:
+      - "1025:1025"
+      - "2222:2222"
+
+volumes:
+  db:
+    external: true
