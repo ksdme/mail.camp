@@ -12,12 +12,12 @@ services:
       - "SSH_BIND_ADDR=0.0.0.0:2222"
       - "SSH_HOST_KEY_PATH=/ssh/id_rsa"
     volumes:
-      - "db:/data"
+      - "mail-ssh-camp-db:/data"
       - "$HOME/.ssh/id_rsa:/ssh/id_rsa"
     ports:
       - "1025:1025"
       - "2222:2222"
 
 volumes:
-  db:
+  mail-ssh-camp-db:
     external: true
