@@ -9,12 +9,14 @@ services:
       - "SMTP_BIND_ADDR=0.0.0.0:1025"
       - "SSH_BIND_ADDR=0.0.0.0:2222"
       - "SSH_HOST_KEY_PATH=/ssh/id_ed25519"
+    cap_add:
+      - CAP_NET_BIND_SERVICE
     volumes:
       - "mail-ssh-camp-db:/data"
       - "$HOME/.ssh/id_ed25519:/ssh/id_ed25519"
     ports:
       - "1025:1025"
-      - "2222:2222"
+      - "25:2222"
 
 volumes:
   mail-ssh-camp-db:
