@@ -59,7 +59,7 @@ func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	pStyles.Title = pStyles.Title.Foreground(colors.Muted)
 	pStyles.Badge = pStyles.Badge.Foreground(colors.Muted)
 	pStyles.Regular = pStyles.Regular.Foreground(colors.Text)
-	pStyles.Highlighted = pStyles.Highlighted.Foreground(colors.Accent)
+	pStyles.Highlighted = pStyles.Highlighted.Foreground(colors.Accent).Bold(true)
 	pStyles.SelectedLegend = pStyles.SelectedLegend.Foreground(colors.Accent)
 	mailboxes := picker.NewModel("Mailboxes", []picker.Item{}, width/3, height)
 	mailboxes.Styles = pStyles
@@ -68,7 +68,7 @@ func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	// Setup the mails table.
 	tStyles := table.DefaultStyles(renderer)
 	tStyles.Header = renderer.NewStyle().Height(2).Foreground(colors.Muted)
-	tStyles.Selected = tStyles.Selected.Foreground(colors.Accent)
+	tStyles.Selected = tStyles.Selected.Foreground(colors.Accent).Bold(true)
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(width*2/3)),
 		table.WithHeight(height),
