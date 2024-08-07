@@ -218,6 +218,7 @@ func (m Model) refreshMails(mailbox models.Mailbox) tea.Cmd {
 		err := m.db.NewSelect().
 			Model(&mails).
 			Where("mailbox_id = ?", mailbox.ID).
+			Order("id DESC").
 			Scan(context.Background())
 
 		return home.MailsRefreshedMsg{

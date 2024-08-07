@@ -7,7 +7,6 @@ MVP
 - Simple home page on mail.ssh.camp
 - Table columns should have space between them
 - Add DKIM signature
-- Sort emails in reverse order
 
 General
 - Create account with prefix reservation
@@ -33,3 +32,4 @@ Done
 - Term colors are missing
 - MX DNS
 - HTML to Text does not seem to work correctly
+- Sort emails in reverse order
