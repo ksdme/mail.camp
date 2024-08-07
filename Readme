@@ -5,7 +5,6 @@ MVP
 - React to system signals
 - Simple home page on ssh.camp
 - Simple home page on mail.ssh.camp
-- Table columns should have space between them
 - Add DKIM signature
 
 General
@@ -33,3 +32,4 @@ Done
 - MX DNS
 - HTML to Text does not seem to work correctly
 - Sort emails in reverse order
+- Table columns should have space between them

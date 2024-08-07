@@ -67,8 +67,9 @@ func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 
 	// Setup the mails table.
 	tStyles := table.DefaultStyles(renderer)
-	tStyles.Header = renderer.NewStyle().Height(2).Foreground(colors.Muted)
+	tStyles.Header = renderer.NewStyle().Height(2).Foreground(colors.Muted).PaddingLeft(1)
 	tStyles.Selected = tStyles.Selected.Foreground(colors.Accent).Bold(true)
+	tStyles.Cell = tStyles.Cell.PaddingLeft(1)
 	table := table.New(
 		table.WithColumns(makeMailTableColumns(width*2/3)),
 		table.WithHeight(height),
@@ -220,7 +221,7 @@ func (m Model) View() string {
 
 	mailboxes := m.Renderer.
 		NewStyle().
-		PaddingRight(6).
+		PaddingRight(5).
 		Foreground(m.Colors.Text).
 		Render(m.mailboxes.View())
 
