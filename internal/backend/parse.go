@@ -9,7 +9,7 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/k3a/html2text"
+	"github.com/jaytaylor/html2text"
 	"github.com/pkg/errors"
 )
 
@@ -149,13 +149,16 @@ func extractPlainText(message *mail.Message) (string, error) {
 		return text, nil
 	}
 	if len(html) > 0 {
-		slog.Debug("transforming html to text")
-		value := html2text.HTML2TextWithOptions(
-			html,
-			html2text.WithLinksInnerText(),
-			html2text.WithListSupport(),
-		)
-		return value, nil
+		text, err := html2text.FromString(html, html2text.Options{
+			TextOnly:     false,
+			PrettyTables: false,
+		})
+		if err != nil {
+			slog.Info("could not parse html to text", "err", err)
+			return "could not parse html contents :(", nil
+		} else {
+			return text, nil
+		}
 	}
 
 	return "empty message :(", nil

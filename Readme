@@ -3,10 +3,11 @@
 MVP
 - Unread mail badge
 - React to system signals
-- MX DNS
 - Simple home page on ssh.camp
 - Simple home page on mail.ssh.camp
-- Term colors are missing
+- Table columns should have space between them
+- Add DKIM signature
+- Sort emails in reverse order
 
 General
 - Create account with prefix reservation
@@ -29,3 +30,6 @@ Done
 - Migrate automatically
 - docker configuration
 - Docker build
+- Term colors are missing
+- MX DNS
+- HTML to Text does not seem to work correctly
