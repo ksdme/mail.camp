@@ -27,19 +27,20 @@ type MailboxesRefreshedMsg struct {
 }
 
 type MailboxSelectedMsg struct {
-	Mailbox MailboxWithUnread
+	Mailbox *MailboxWithUnread
 }
 
 type MailsRefreshedMsg struct {
-	Mailbox MailboxWithUnread
+	Mailbox *MailboxWithUnread
 	Mails   []models.Mail
 	Err     error
 }
 
-type CreateRandomMailboxMsg struct{}
+type CreateRandomMailboxMsg struct {
+}
 
 type DeleteMailboxMsg struct {
-	Mailbox models.Mailbox
+	Mailbox *MailboxWithUnread
 }
 
 type Model struct {
@@ -53,7 +54,7 @@ type Model struct {
 	Renderer *lipgloss.Renderer
 	Colors   colors.ColorPalette
 
-	SelectedMailbox MailboxWithUnread
+	SelectedMailbox *MailboxWithUnread
 }
 
 func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
@@ -126,8 +127,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		case key.Matches(msg, m.KeyMap.Select):
 			if m.mailboxes.IsFocused() {
-				if item, err := m.mailboxes.Select(); err == nil {
-					m.SelectedMailbox = item.Value.(MailboxWithUnread)
+				if item := m.mailboxes.Select(); item != nil {
+					m.SelectedMailbox = item.(*mailboxItem).mailbox
 
 					m.mails.SetRows([]table.Row{})
 					m.mailboxes.Blur()
@@ -146,8 +147,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			return m, m.createRandomMailbox
 
 		case key.Matches(msg, m.KeyMap.DeleteMailbox):
-			if item, err := m.mailboxes.HighlightedItem(); err == nil {
-				mailbox := item.Value.(models.Mailbox)
+			if item := m.mailboxes.HighlightedItem(); item != nil {
+				mailbox := item.(*mailboxItem).mailbox
 				return m, m.deleteMailbox(mailbox)
 			}
 		}
@@ -156,11 +157,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// TODO: Handle error.
 		var items []picker.Item
 		for _, mailbox := range msg.Mailboxes {
-			items = append(items, picker.Item{
-				ID:    int(mailbox.ID),
-				Label: mailbox.Email(),
-				Value: mailbox,
-				Badge: strconv.Itoa(mailbox.Unread),
+			items = append(items, &mailboxItem{
+				mailbox: &mailbox,
 			})
 		}
 		m.mailboxes.SetItems(items)
@@ -168,8 +166,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// Trigger mails load.
 		m.mails.SetRows([]table.Row{})
 		if m.mailboxes.HasItems() {
-			if item, err := m.mailboxes.SelectedItem(); err == nil {
-				m.SelectedMailbox = item.Value.(MailboxWithUnread)
+			if item := m.mailboxes.SelectedItem(); item != nil {
+				m.SelectedMailbox = item.(*mailboxItem).mailbox
 				return m, m.mailboxSelected
 			}
 		}
@@ -266,13 +264,13 @@ func (m Model) mailboxSelected() tea.Msg {
 	return MailboxSelectedMsg{Mailbox: m.SelectedMailbox}
 }
 
-func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
+func (m Model) deleteMailbox(mailbox *MailboxWithUnread) tea.Cmd {
 	return func() tea.Msg {
 		return DeleteMailboxMsg{mailbox}
 	}
 }
 
-func (m Model) mailSelected(mailbox MailboxWithUnread, mail models.Mail) tea.Cmd {
+func (m Model) mailSelected(mailbox *MailboxWithUnread, mail models.Mail) tea.Cmd {
 	return func() tea.Msg {
 		return email.MailSelectedMsg{To: mailbox.Email(), Mail: mail}
 	}
@@ -349,4 +347,20 @@ func makeMailTableColumns(width int) []table.Column {
 		{Title: "From", Width: from},
 		{Title: "At", Width: at},
 	}
+}
+
+type mailboxItem struct {
+	mailbox *MailboxWithUnread
+}
+
+func (m *mailboxItem) ID() int {
+	return int(m.mailbox.ID)
+}
+
+func (m *mailboxItem) Label() string {
+	return m.mailbox.Email()
+}
+
+func (m *mailboxItem) Badge() string {
+	return strconv.Itoa(m.mailbox.Unread)
 }

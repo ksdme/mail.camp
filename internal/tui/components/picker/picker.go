@@ -1,19 +1,15 @@
 package picker
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-// An item in the picker list.
-type Item struct {
-	ID    int
-	Label string
-	Badge string
-	Value any
+type Item interface {
+	ID() int
+	Label() string
+	Badge() string
 }
 
 // A picker is a component that can be used to show a list of
@@ -64,9 +60,9 @@ func (m Model) IsFocused() bool {
 
 func (m *Model) SetItems(items []Item) {
 	newSelected := 0
-	if item, err := m.SelectedItem(); err == nil {
+	if item := m.SelectedItem(); item != nil {
 		for index, element := range items {
-			if element.ID == item.ID {
+			if element.ID() == item.ID() {
 				newSelected = index
 				break
 			}
@@ -82,22 +78,22 @@ func (m Model) HasItems() bool {
 	return len(m.items) > 0
 }
 
-func (m Model) SelectedItem() (Item, error) {
+func (m Model) SelectedItem() Item {
 	if m.selected < 0 || m.selected >= len(m.items) {
-		return Item{}, fmt.Errorf("invalid selection")
+		return nil
 	}
-	return m.items[m.selected], nil
+	return m.items[m.selected]
 }
 
-func (m Model) HighlightedItem() (Item, error) {
+func (m Model) HighlightedItem() Item {
 	if m.highlighted < 0 || m.highlighted >= len(m.items) {
-		return Item{}, fmt.Errorf("invalid highlight")
+		return nil
 	}
-	return m.items[m.highlighted], nil
+	return m.items[m.highlighted]
 }
 
 // Mark and return the current highlighted item as the selected item.
-func (m *Model) Select() (Item, error) {
+func (m *Model) Select() Item {
 	m.selected = m.highlighted
 	return m.SelectedItem()
 }
@@ -172,8 +168,9 @@ func (m Model) View() string {
 		}
 
 		// If the text overflows, trim it, add ellipsis.
-		label := item.Label
-		total := len(label) + len(item.Badge) + 2
+		label := item.Label()
+		badge := item.Badge()
+		total := len(label) + len(badge) + 2
 		if total > m.Width {
 			// TODO: Trim from badges too.
 			label = label[:len(label)-(total-m.Width+3)] + "…"
@@ -192,8 +189,8 @@ func (m Model) View() string {
 			label,
 		)
 
-		if len(item.Badge) != 0 {
-			badge := m.Styles.Badge.Render(item.Badge)
+		if len(badge) != 0 {
+			badge := m.Styles.Badge.Render(badge)
 			line = lipgloss.JoinHorizontal(
 				lipgloss.Bottom,
 				line,

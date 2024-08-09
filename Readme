@@ -1,13 +1,15 @@
-### Pending
+### Plan
+
+#### mail
 
 MVP
-- Unread mail badge
 - React to system signals
 - Simple home page on ssh.camp
 - Simple home page on mail.ssh.camp
 - Add DKIM signature
+- Email bounced despite being delivered
 
-General
+Others
 - Create account with prefix reservation
 - Create mailbox with reserved prefix
 - Delete mail
@@ -33,3 +35,4 @@ Done
 - HTML to Text does not seem to work correctly
 - Sort emails in reverse order
 - Table columns should have space between them
+- Unread mail badge

@@ -128,7 +128,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case email.MailSelectedMsg:
 		m.mode = Email
 		m.email, cmd = m.email.Update(msg)
-		return m, cmd
+		return m, tea.Batch(cmd, m.markMailSeen(msg.Mail))
 
 	case email.MailDismissMsg:
 		m.mode = Home
@@ -217,7 +217,7 @@ func (m Model) refreshMailboxes() tea.Msg {
 	return home.MailboxesRefreshedMsg{Mailboxes: mailboxes, Err: err}
 }
 
-func (m Model) refreshMails(mailbox home.MailboxWithUnread) tea.Cmd {
+func (m Model) refreshMails(mailbox *home.MailboxWithUnread) tea.Cmd {
 	return func() tea.Msg {
 		var mails []models.Mail
 
@@ -257,12 +257,12 @@ func (m Model) createRandomMailbox() tea.Msg {
 	return m.refreshMailboxes()
 }
 
-func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
+func (m Model) deleteMailbox(mailbox *home.MailboxWithUnread) tea.Cmd {
 	return func() tea.Msg {
 		// TODO: The context should be bound to the ssh connection.
 		_, err := m.db.
 			NewDelete().
-			Model(&mailbox).
+			Model(&models.Mailbox{}).
 			Where("id = ?", mailbox.ID).
 			Exec(context.Background())
 		if err != nil {
@@ -279,6 +279,26 @@ func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
 		}
 
 		return m.refreshMailboxes()
+	}
+}
+
+func (m Model) markMailSeen(mail models.Mail) tea.Cmd {
+	return func() tea.Msg {
+		if !mail.Seen {
+			mail.Seen = true
+
+			// TODO: The context should be bound to the ssh connection.
+			_, err := m.db.NewUpdate().Model(&mail).WherePK().Exec(context.Background())
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			if m.home.SelectedMailbox != nil && mail.MailboxID == m.home.SelectedMailbox.ID {
+				m.home.SelectedMailbox.Unread -= 1
+			}
+		}
+
+		return nil
 	}
 }
 
