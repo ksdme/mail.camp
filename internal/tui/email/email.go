@@ -14,8 +14,8 @@ import (
 )
 
 type MailSelectedMsg struct {
-	Mailbox models.Mailbox
-	Mail    models.Mail
+	To   string
+	Mail models.Mail
 }
 
 type MailDismissMsg struct{}
@@ -64,7 +64,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 
 	case MailSelectedMsg:
-		m.viewport.SetContent(m.makeContent(msg.Mailbox, msg.Mail))
+		m.viewport.SetContent(m.makeContent(msg.To, msg.Mail))
 		m.viewport.SetYOffset(0)
 		return m, nil
 	}
@@ -78,7 +78,7 @@ func (m Model) View() string {
 	return m.viewport.View()
 }
 
-func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
+func (m Model) makeContent(toAddress string, mail models.Mail) string {
 	labelStyle := m.Renderer.
 		NewStyle().
 		Foreground(m.Colors.Muted).
@@ -101,7 +101,7 @@ func (m Model) makeContent(mailbox models.Mailbox, mail models.Mail) string {
 	to := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		labelStyle.Render("To"),
-		valueStyle.Render(mailbox.Email()),
+		valueStyle.Render(toAddress),
 	)
 
 	subject := lipgloss.JoinHorizontal(

@@ -2,6 +2,7 @@ package home
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -15,17 +16,22 @@ import (
 	"github.com/ksdme/mail/internal/utils"
 )
 
+type MailboxWithUnread struct {
+	models.Mailbox
+	Unread int
+}
+
 type MailboxesRefreshedMsg struct {
-	Mailboxes []models.Mailbox
+	Mailboxes []MailboxWithUnread
 	Err       error
 }
 
 type MailboxSelectedMsg struct {
-	Mailbox models.Mailbox
+	Mailbox MailboxWithUnread
 }
 
 type MailsRefreshedMsg struct {
-	Mailbox models.Mailbox
+	Mailbox MailboxWithUnread
 	Mails   []models.Mail
 	Err     error
 }
@@ -47,7 +53,7 @@ type Model struct {
 	Renderer *lipgloss.Renderer
 	Colors   colors.ColorPalette
 
-	SelectedMailbox models.Mailbox
+	SelectedMailbox MailboxWithUnread
 }
 
 func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
@@ -121,7 +127,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Select):
 			if m.mailboxes.IsFocused() {
 				if item, err := m.mailboxes.Select(); err == nil {
-					m.SelectedMailbox = item.Value.(models.Mailbox)
+					m.SelectedMailbox = item.Value.(MailboxWithUnread)
 
 					m.mails.SetRows([]table.Row{})
 					m.mailboxes.Blur()
@@ -154,6 +160,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				ID:    int(mailbox.ID),
 				Label: mailbox.Email(),
 				Value: mailbox,
+				Badge: strconv.Itoa(mailbox.Unread),
 			})
 		}
 		m.mailboxes.SetItems(items)
@@ -162,7 +169,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.mails.SetRows([]table.Row{})
 		if m.mailboxes.HasItems() {
 			if item, err := m.mailboxes.SelectedItem(); err == nil {
-				m.SelectedMailbox = item.Value.(models.Mailbox)
+				m.SelectedMailbox = item.Value.(MailboxWithUnread)
 				return m, m.mailboxSelected
 			}
 		}
@@ -265,9 +272,9 @@ func (m Model) deleteMailbox(mailbox models.Mailbox) tea.Cmd {
 	}
 }
 
-func (m Model) mailSelected(mailbox models.Mailbox, mail models.Mail) tea.Cmd {
+func (m Model) mailSelected(mailbox MailboxWithUnread, mail models.Mail) tea.Cmd {
 	return func() tea.Msg {
-		return email.MailSelectedMsg{Mailbox: mailbox, Mail: mail}
+		return email.MailSelectedMsg{To: mailbox.Email(), Mail: mail}
 	}
 }
 

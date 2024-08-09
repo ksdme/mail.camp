@@ -198,19 +198,26 @@ func (m Model) Help() []key.Binding {
 }
 
 func (m Model) refreshMailboxes() tea.Msg {
-	var mailboxes []models.Mailbox
+	var mailboxes []home.MailboxWithUnread
 
 	// TODO: The context should be bound to the ssh connection.
+	var mailbox *models.Mailbox
 	err := m.db.NewSelect().
-		Model(&mailboxes).
-		Where("account_id = ?", m.account.ID).
-		Order("id DESC").
-		Scan(context.Background())
+		Model(mailbox).
+		Column("mailbox.*").
+		ColumnExpr("COUNT(mail.id) AS unread").
+		Where("mailbox.account_id = ?", m.account.ID).
+		Join("LEFT JOIN mails AS mail").
+		JoinOn("mail.mailbox_id = mailbox.id").
+		JoinOn("mail.seen = false").
+		Order("mailbox.id DESC").
+		Group("mailbox.id").
+		Scan(context.Background(), &mailboxes)
 
 	return home.MailboxesRefreshedMsg{Mailboxes: mailboxes, Err: err}
 }
 
-func (m Model) refreshMails(mailbox models.Mailbox) tea.Cmd {
+func (m Model) refreshMails(mailbox home.MailboxWithUnread) tea.Cmd {
 	return func() tea.Msg {
 		var mails []models.Mail
 
