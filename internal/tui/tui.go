@@ -106,14 +106,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		slog.Debug("received mailbox update", "mailbox", msg.mailbox)
 		if msg.mailbox == m.home.SelectedMailbox.ID {
 			return m, tea.Batch(
+				// TODO: Debounce these loads.
 				m.refreshMails(m.home.SelectedMailbox),
-				m.listenToMailboxUpdate,
 				m.refreshMailboxes(true),
+				m.listenToMailboxUpdate,
 			)
 		}
 		return m, tea.Batch(
-			m.listenToMailboxUpdate,
+			// TODO: Debounce this load.
 			m.refreshMailboxes(true),
+			m.listenToMailboxUpdate,
 		)
 
 	case home.MailboxesRefreshedMsg:
