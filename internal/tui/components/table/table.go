@@ -328,7 +328,6 @@ func (m *Model) SetRows(r []Row) {
 			}
 		}
 	}
-
 	m.rows = r
 	m.cursor = cursor
 	m.UpdateViewport()

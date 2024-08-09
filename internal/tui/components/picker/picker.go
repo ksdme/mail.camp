@@ -58,15 +58,8 @@ func (m Model) IsFocused() bool {
 	return m.focused
 }
 
-func (m *Model) SetItems(items []Item, clearSelection bool) {
-	if clearSelection {
-		m.items = items
-		m.selected = -1
-		m.highlighted = 0
-		return
-	}
-
-	newSelected := -1
+func (m *Model) SetItems(items []Item) {
+	newSelected := 0
 	if item := m.SelectedItem(); item != nil {
 		for index, element := range items {
 			if element.ID() == item.ID() {
@@ -75,19 +68,9 @@ func (m *Model) SetItems(items []Item, clearSelection bool) {
 			}
 		}
 	}
-
-	newHighlighted := 0
-	if newSelected == -1 {
-		// Move the element to the same position as the selected
-		// element was before the items were updated.
-		newHighlighted = m.clampedIndex(m.selected)
-	} else {
-		newHighlighted = newSelected
-	}
-
 	m.items = items
 	m.selected = newSelected
-	m.highlighted = newHighlighted
+	m.highlighted = m.clampedIndex(m.highlighted)
 }
 
 func (m Model) HasItems() bool {
@@ -165,19 +148,24 @@ func (m Model) View() string {
 	}
 
 	// Keep the highlighted line visible.
-	var items []Item
+	var starts, ends int
 	if m.highlighted > height-1 {
-		items = m.items[m.highlighted-height+1 : m.highlighted+1]
+		starts = m.highlighted - height + 1
+		ends = m.highlighted + 1
 	} else {
 		if len(m.items) > height {
-			items = m.items[:height]
+			starts = 0
+			ends = height
 		} else {
-			items = m.items
+			starts = 0
+			ends = len(m.items)
 		}
 	}
 
 	// Render lines.
-	for index, item := range items {
+	for index := starts; index < ends; index += 1 {
+		item := m.items[index]
+
 		legend := " "
 		if index == m.selected {
 			legend = m.Styles.SelectedLegend.Render("┃")
