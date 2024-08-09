@@ -72,7 +72,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		m.home.Init(),
 		m.email.Init(),
-		m.refreshMailboxes,
+		m.refreshMailboxes(false),
 		m.listenToMailboxUpdate,
 	)
 }
@@ -108,9 +108,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(
 				m.refreshMails(m.home.SelectedMailbox),
 				m.listenToMailboxUpdate,
+				m.refreshMailboxes(true),
 			)
 		}
-		return m, m.listenToMailboxUpdate
+		return m, tea.Batch(
+			m.listenToMailboxUpdate,
+			m.refreshMailboxes(true),
+		)
 
 	case home.MailboxesRefreshedMsg:
 		m.home, cmd = m.home.Update(msg)
@@ -197,24 +201,30 @@ func (m Model) Help() []key.Binding {
 	return append(bindings, m.KeyMap.Quit)
 }
 
-func (m Model) refreshMailboxes() tea.Msg {
-	var mailboxes []home.MailboxWithUnread
+func (m Model) refreshMailboxes(passive bool) tea.Cmd {
+	return func() tea.Msg {
+		var mailboxes []home.MailboxWithUnread
 
-	// TODO: The context should be bound to the ssh connection.
-	var mailbox *models.Mailbox
-	err := m.db.NewSelect().
-		Model(mailbox).
-		Column("mailbox.*").
-		ColumnExpr("COUNT(mail.id) AS unread").
-		Where("mailbox.account_id = ?", m.account.ID).
-		Join("LEFT JOIN mails AS mail").
-		JoinOn("mail.mailbox_id = mailbox.id").
-		JoinOn("mail.seen = false").
-		Order("mailbox.id DESC").
-		Group("mailbox.id").
-		Scan(context.Background(), &mailboxes)
+		// TODO: The context should be bound to the ssh connection.
+		var mailbox *models.Mailbox
+		err := m.db.NewSelect().
+			Model(mailbox).
+			Column("mailbox.*").
+			ColumnExpr("COUNT(mail.id) AS unread").
+			Where("mailbox.account_id = ?", m.account.ID).
+			Join("LEFT JOIN mails AS mail").
+			JoinOn("mail.mailbox_id = mailbox.id").
+			JoinOn("mail.seen = false").
+			Order("mailbox.id DESC").
+			Group("mailbox.id").
+			Scan(context.Background(), &mailboxes)
 
-	return home.MailboxesRefreshedMsg{Mailboxes: mailboxes, Err: err}
+		return home.MailboxesRefreshedMsg{
+			Passive:   passive,
+			Mailboxes: mailboxes,
+			Err:       err,
+		}
+	}
 }
 
 func (m Model) refreshMails(mailbox *home.MailboxWithUnread) tea.Cmd {
@@ -254,7 +264,7 @@ func (m Model) createRandomMailbox() tea.Msg {
 		return nil
 	}
 
-	return m.refreshMailboxes()
+	return m.refreshMailboxes(false)
 }
 
 func (m Model) deleteMailbox(mailbox *home.MailboxWithUnread) tea.Cmd {
@@ -278,7 +288,7 @@ func (m Model) deleteMailbox(mailbox *home.MailboxWithUnread) tea.Cmd {
 			return nil
 		}
 
-		return m.refreshMailboxes()
+		return m.refreshMailboxes(false)()
 	}
 }
 

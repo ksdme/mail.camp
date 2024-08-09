@@ -22,6 +22,7 @@ type MailboxWithUnread struct {
 }
 
 type MailboxesRefreshedMsg struct {
+	Passive   bool
 	Mailboxes []MailboxWithUnread
 	Err       error
 }
@@ -161,14 +162,16 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				mailbox: &mailbox,
 			})
 		}
-		m.mailboxes.SetItems(items, false)
+		m.mailboxes.SetItems(items)
 
 		// Trigger mails load.
-		m.mails.SetRows([]table.Row{})
-		if m.mailboxes.HasItems() {
-			if item := m.mailboxes.SelectedItem(); item != nil {
-				m.SelectedMailbox = item.(*mailboxItem).mailbox
-				return m, m.mailboxSelected
+		if !msg.Passive {
+			m.mails.SetRows([]table.Row{})
+			if m.mailboxes.HasItems() {
+				if item := m.mailboxes.SelectedItem(); item != nil {
+					m.SelectedMailbox = item.(*mailboxItem).mailbox
+					return m, m.mailboxSelected
+				}
 			}
 		}
 		return m, nil
