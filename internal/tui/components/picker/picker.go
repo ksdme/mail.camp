@@ -58,8 +58,15 @@ func (m Model) IsFocused() bool {
 	return m.focused
 }
 
-func (m *Model) SetItems(items []Item) {
-	newSelected := 0
+func (m *Model) SetItems(items []Item, clearSelection bool) {
+	if clearSelection {
+		m.items = items
+		m.selected = -1
+		m.highlighted = 0
+		return
+	}
+
+	newSelected := -1
 	if item := m.SelectedItem(); item != nil {
 		for index, element := range items {
 			if element.ID() == item.ID() {
@@ -69,9 +76,18 @@ func (m *Model) SetItems(items []Item) {
 		}
 	}
 
+	newHighlighted := 0
+	if newSelected == -1 {
+		// Move the element to the same position as the selected
+		// element was before the items were updated.
+		newHighlighted = m.clampedIndex(m.selected)
+	} else {
+		newHighlighted = newSelected
+	}
+
 	m.items = items
 	m.selected = newSelected
-	m.highlighted = newSelected
+	m.highlighted = newHighlighted
 }
 
 func (m Model) HasItems() bool {

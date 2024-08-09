@@ -161,7 +161,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				mailbox: &mailbox,
 			})
 		}
-		m.mailboxes.SetItems(items)
+		m.mailboxes.SetItems(items, false)
 
 		// Trigger mails load.
 		m.mails.SetRows([]table.Row{})
