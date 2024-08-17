@@ -31,6 +31,7 @@ func main() {
 	if config.Core.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
+	slog.Info("starting up")
 
 	sqldb, err := sql.Open("sqlite3", config.Core.DBURI)
 	if err != nil {

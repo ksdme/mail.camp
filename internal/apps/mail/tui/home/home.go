@@ -58,7 +58,7 @@ type Model struct {
 	Colors   colors.ColorPalette
 }
 
-func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
+func NewModel(db *bun.DB, renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	width := 80
 	height := 80
 
@@ -86,6 +86,8 @@ func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 	)
 
 	return Model{
+		db: db,
+
 		mailboxes: mailboxes,
 		mails:     table,
 

@@ -50,7 +50,7 @@ func NewModel(
 		account: account,
 
 		mode:  Home,
-		home:  home.NewModel(renderer, colors),
+		home:  home.NewModel(db, renderer, colors),
 		email: email.NewModel(renderer, colors),
 
 		KeyMap:   DefaultKeyMap(),
