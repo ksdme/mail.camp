@@ -21,13 +21,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
+type MailboxRealTimeUpdate struct {
+	mailbox int64
+}
+
 type mailboxWithUnread struct {
 	models.Mailbox
 	Unread int
-}
-
-type mailboxRealTimeUpdate struct {
-	mailbox int64
 }
 
 type mailboxesRefreshedMsg struct {
@@ -160,7 +160,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 
-	case mailboxRealTimeUpdate:
+	case MailboxRealTimeUpdate:
+		// TODO: Maybe don't refresh if the home view is not active.
 		slog.Debug("received mailbox update", "mailbox", msg.mailbox)
 		if msg.mailbox == m.mailbox.ID {
 			return m, tea.Batch(
@@ -368,7 +369,7 @@ func (m Model) deleteMailbox(mailbox *mailboxWithUnread) tea.Cmd {
 func (m Model) listenToMailboxUpdate() tea.Msg {
 	slog.Debug("listening to mailbox updates", "account", m.account.ID)
 	if value, aborted := mail.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
-		return mailboxRealTimeUpdate{value}
+		return MailboxRealTimeUpdate{value}
 	}
 
 	return nil

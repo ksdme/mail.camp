@@ -91,6 +91,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+	case home.MailboxRealTimeUpdate:
+		m.home, cmd = m.home.Update(msg)
+		return m, cmd
+
 	case email.MailDismissMsg:
 		m.mode = Home
 		return m, nil
