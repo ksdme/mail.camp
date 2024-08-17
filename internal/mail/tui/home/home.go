@@ -1,51 +1,53 @@
 package home
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/picker"
 	"github.com/ksdme/mail/internal/core/tui/components/table"
+	"github.com/ksdme/mail/internal/mail"
 	"github.com/ksdme/mail/internal/mail/models"
 	"github.com/ksdme/mail/internal/mail/tui/email"
 	"github.com/ksdme/mail/internal/utils"
+	"github.com/uptrace/bun"
 )
 
-type MailboxWithUnread struct {
+type mailboxWithUnread struct {
 	models.Mailbox
 	Unread int
 }
 
-type MailboxesRefreshedMsg struct {
-	Passive   bool
-	Mailboxes []MailboxWithUnread
-	Err       error
+type mailboxRealTimeUpdate struct {
+	mailbox int64
 }
 
-type MailboxSelectedMsg struct {
-	Mailbox *MailboxWithUnread
+type mailboxesRefreshedMsg struct {
+	passive   bool
+	mailboxes []mailboxWithUnread
+	err       error
 }
 
-type MailsRefreshedMsg struct {
-	Mailbox *MailboxWithUnread
-	Mails   []models.Mail
-	Err     error
-}
-
-type CreateRandomMailboxMsg struct {
-}
-
-type DeleteMailboxMsg struct {
-	Mailbox *MailboxWithUnread
+type mailsRefreshedMsg struct {
+	mailbox *mailboxWithUnread
+	mails   []models.Mail
+	err     error
 }
 
 type Model struct {
+	db      *bun.DB
+	account core.Account
+
 	mailboxes picker.Model
+	mailbox   *mailboxWithUnread
 	mails     table.Model
 
 	Width  int
@@ -54,8 +56,6 @@ type Model struct {
 	KeyMap   KeyMap
 	Renderer *lipgloss.Renderer
 	Colors   colors.ColorPalette
-
-	SelectedMailbox *MailboxWithUnread
 }
 
 func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
@@ -99,7 +99,10 @@ func NewModel(renderer *lipgloss.Renderer, colors colors.ColorPalette) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		m.refreshMailboxes(false),
+		m.listenToMailboxUpdate,
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -129,18 +132,21 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case key.Matches(msg, m.KeyMap.Select):
 			if m.mailboxes.IsFocused() {
 				if item := m.mailboxes.Select(); item != nil {
-					m.SelectedMailbox = item.(*mailboxItem).mailbox
+					m.mailbox = item.(*mailboxItem).mailbox
 
 					m.mails.SetRows([]table.Row{})
 					m.mailboxes.Blur()
 					m.mails.Focus()
 
-					return m, m.mailboxSelected
+					return m, m.refreshMails(m.mailbox)
 				}
 			} else if m.mails.Focused() {
 				if row, err := m.mails.SelectedRow(); err == nil {
 					mail := row.Value.(models.Mail)
-					return m, m.mailSelected(m.SelectedMailbox, mail)
+					return m, tea.Batch(
+						m.mailSelected(m.mailbox, mail),
+						m.markMailSeen(mail),
+					)
 				}
 			}
 
@@ -154,10 +160,26 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			}
 		}
 
-	case MailboxesRefreshedMsg:
+	case mailboxRealTimeUpdate:
+		slog.Debug("received mailbox update", "mailbox", msg.mailbox)
+		if msg.mailbox == m.mailbox.ID {
+			return m, tea.Batch(
+				// TODO: Debounce these loads.
+				m.refreshMails(m.mailbox),
+				m.refreshMailboxes(true),
+				m.listenToMailboxUpdate,
+			)
+		}
+		return m, tea.Batch(
+			// TODO: Debounce this load.
+			m.refreshMailboxes(true),
+			m.listenToMailboxUpdate,
+		)
+
+	case mailboxesRefreshedMsg:
 		// TODO: Handle error.
 		var items []picker.Item
-		for _, mailbox := range msg.Mailboxes {
+		for _, mailbox := range msg.mailboxes {
 			items = append(items, &mailboxItem{
 				mailbox: &mailbox,
 			})
@@ -165,22 +187,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.mailboxes.SetItems(items)
 
 		// Trigger mails load.
-		if !msg.Passive {
+		if !msg.passive {
 			m.mails.SetRows([]table.Row{})
 			if m.mailboxes.HasItems() {
 				if item := m.mailboxes.SelectedItem(); item != nil {
-					m.SelectedMailbox = item.(*mailboxItem).mailbox
-					return m, m.mailboxSelected
+					m.mailbox = item.(*mailboxItem).mailbox
+					return m, m.refreshMails(m.mailbox)
 				}
 			}
 		}
 		return m, nil
 
-	case MailsRefreshedMsg:
+	case mailsRefreshedMsg:
 		// TODO: Handle error.
-		if msg.Mailbox.ID == m.SelectedMailbox.ID {
+		if msg.mailbox.ID == m.mailbox.ID {
 			var items []table.Row
-			for _, mail := range msg.Mails {
+			for _, mail := range msg.mails {
 				age := fmt.Sprintf(
 					"%s ago",
 					utils.RoundedAge(time.Since(mail.CreatedAt)),
@@ -249,7 +271,7 @@ func (m Model) View() string {
 				Foreground(m.Colors.Text).
 				Render(fmt.Sprintf(
 					"no mails in %s, incoming mails are only stored for 48h",
-					m.SelectedMailbox.Email(),
+					m.mailbox.Email(),
 				)),
 		)
 	} else {
@@ -263,24 +285,118 @@ func (m Model) View() string {
 	)
 }
 
-func (m Model) mailboxSelected() tea.Msg {
-	return MailboxSelectedMsg{Mailbox: m.SelectedMailbox}
-}
-
-func (m Model) deleteMailbox(mailbox *MailboxWithUnread) tea.Cmd {
+func (m Model) refreshMailboxes(passive bool) tea.Cmd {
 	return func() tea.Msg {
-		return DeleteMailboxMsg{mailbox}
+		var mailboxes []mailboxWithUnread
+
+		var mailbox *models.Mailbox
+		err := m.db.NewSelect().
+			Model(mailbox).
+			Column("mailbox.*").
+			ColumnExpr("COUNT(mail.id) AS unread").
+			Where("mailbox.account_id = ?", m.account.ID).
+			Join("LEFT JOIN mails AS mail").
+			JoinOn("mail.mailbox_id = mailbox.id").
+			JoinOn("mail.seen = false").
+			Order("mailbox.id DESC").
+			Group("mailbox.id").
+			Scan(context.TODO(), &mailboxes)
+
+		return mailboxesRefreshedMsg{
+			passive:   passive,
+			mailboxes: mailboxes,
+			err:       err,
+		}
 	}
 }
 
-func (m Model) mailSelected(mailbox *MailboxWithUnread, mail models.Mail) tea.Cmd {
+func (m Model) refreshMails(mailbox *mailboxWithUnread) tea.Cmd {
 	return func() tea.Msg {
-		return email.MailSelectedMsg{To: mailbox.Email(), Mail: mail}
+		var mails []models.Mail
+
+		err := m.db.NewSelect().
+			Model(&mails).
+			Where("mailbox_id = ?", mailbox.ID).
+			Order("id DESC").
+			Scan(context.TODO())
+
+		return mailsRefreshedMsg{
+			mailbox: mailbox,
+			mails:   mails,
+			err:     err,
+		}
 	}
 }
 
 func (m Model) createRandomMailbox() tea.Msg {
-	return CreateRandomMailboxMsg{}
+	_, err := models.CreateRandomMailbox(context.TODO(), m.db, m.account)
+	if err != nil {
+		// TODO: Handle this error.
+		slog.Error("could not create mailbox", "err", err)
+		return nil
+	}
+
+	return m.refreshMailboxes(false)()
+}
+
+func (m Model) deleteMailbox(mailbox *mailboxWithUnread) tea.Cmd {
+	return func() tea.Msg {
+		_, err := m.db.
+			NewDelete().
+			Model(&models.Mailbox{}).
+			Where("id = ?", mailbox.ID).
+			Exec(context.TODO())
+		if err != nil {
+			slog.Error("could not delete mailbox", "mailbox", mailbox.ID, "err", err)
+			return nil
+		}
+
+		_, err = m.db.
+			NewDelete().
+			Model(&models.Mail{}).
+			Where("mailbox_id = ?", mailbox.ID).
+			Exec(context.TODO())
+		if err != nil {
+			slog.Error("could not delete mails", "mailbox", mailbox.ID, "err", err)
+			return nil
+		}
+
+		return m.refreshMailboxes(false)()
+	}
+}
+
+func (m Model) listenToMailboxUpdate() tea.Msg {
+	slog.Debug("listening to mailbox updates", "account", m.account.ID)
+	if value, aborted := mail.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
+		return mailboxRealTimeUpdate{value}
+	}
+
+	return nil
+}
+
+func (m Model) markMailSeen(mail models.Mail) tea.Cmd {
+	return func() tea.Msg {
+		if !mail.Seen {
+			mail.Seen = true
+
+			_, err := m.db.NewUpdate().Model(&mail).WherePK().Exec(context.TODO())
+			if err != nil {
+				slog.Error("could not mark email read", "mail", mail.ID, "err", err)
+			}
+
+			if m.mailbox != nil && mail.MailboxID == m.mailbox.ID {
+				m.mailbox.Unread -= 1
+			}
+		}
+
+		return nil
+	}
+}
+
+func (m Model) mailSelected(mailbox *mailboxWithUnread, mail models.Mail) tea.Cmd {
+	return func() tea.Msg {
+		return email.MailSelectedMsg{To: mailbox.Email(), Mail: mail}
+	}
 }
 
 func (m Model) Help() []key.Binding {
@@ -342,18 +458,8 @@ func DefaultKeyMap() KeyMap {
 	}
 }
 
-func makeMailTableColumns(width int) []table.Column {
-	at := width * 1 / 10
-	from := (width * 3) / 10
-	return []table.Column{
-		{Title: "Subject", Width: width - at - from},
-		{Title: "From", Width: from},
-		{Title: "At", Width: at},
-	}
-}
-
 type mailboxItem struct {
-	mailbox *MailboxWithUnread
+	mailbox *mailboxWithUnread
 }
 
 func (m *mailboxItem) ID() int {
@@ -366,4 +472,14 @@ func (m *mailboxItem) Label() string {
 
 func (m *mailboxItem) Badge() string {
 	return strconv.Itoa(m.mailbox.Unread)
+}
+
+func makeMailTableColumns(width int) []table.Column {
+	at := width * 1 / 10
+	from := (width * 3) / 10
+	return []table.Column{
+		{Title: "Subject", Width: width - at - from},
+		{Title: "From", Width: from},
+		{Title: "At", Width: at},
+	}
 }
