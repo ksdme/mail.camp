@@ -6,6 +6,8 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// TODO: Support configuring from cli flags and configuration files too.
+
 // General server level configuration.
 type coreSettings struct {
 	Debug bool `envDefault:"true"`
@@ -16,6 +18,8 @@ type coreSettings struct {
 	SSHHostKeyPath        string `env:"SSH_HOST_KEY_PATH,expand" envDefault:"${HOME}/.ssh/id_rsa"`
 	SSHAuthorizedKeysPath string `env:"SSH_AUTHORIZED_KEYS_PATH"`
 	SSHBindAddr           string `env:"SSH_BIND_ADDR" envDefault:"127.0.0.1:2222"`
+
+	MailAppEnabled bool `env:"MAIL_APP_ENABLED" envDefault:"true"`
 }
 
 // Settings related to the mail app.
@@ -30,10 +34,16 @@ func init() {
 		panic(fmt.Sprintf("could not parse core configuration: %v", err))
 	}
 
-	if err := env.Parse(&Mail); err != nil {
-		panic(fmt.Sprintf("could not parse mail configuration: %v", err))
+	if Core.MailAppEnabled {
+		if err := env.Parse(&Mail); err != nil {
+			panic(fmt.Sprintf("could not parse mail configuration: %v", err))
+		}
 	}
 }
 
 var Core coreSettings
+
+// While it would be nicer to not have a global reference to these settings so
+// we don't accidentally read it when the app is disabled, having it be global
+// makes our life slightly easier for now.
 var Mail mailSettings
