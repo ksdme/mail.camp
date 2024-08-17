@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/emersion/go-smtp"
+	app "github.com/ksdme/mail/internal/apps/mail"
+	"github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/config"
-	app "github.com/ksdme/mail/internal/mail"
-	"github.com/ksdme/mail/internal/mail/models"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 )
