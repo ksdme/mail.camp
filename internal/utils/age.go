@@ -20,7 +20,7 @@ func RoundedAge(duration time.Duration) string {
 	if seconds/year >= 1 {
 		return text(seconds/year, "yr", "yrs")
 	} else if seconds/month >= 1 {
-		return text(seconds/month, "month", "months")
+		return text(seconds/month, "mo", "mo")
 	} else if seconds/week >= 1 {
 		return text(seconds/week, "wk", "wks")
 	} else if seconds/day >= 1 {
