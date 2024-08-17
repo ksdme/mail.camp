@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/emersion/go-smtp"
-	app "github.com/ksdme/mail/internal/apps/mail"
+	"github.com/ksdme/mail/internal/apps/mail/events"
 	"github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/pkg/errors"
@@ -124,7 +124,7 @@ func (s *session) Data(r io.Reader) error {
 				"mailbox", mailbox.ID,
 			)
 
-			app.MailboxContentsUpdatedSignal.Emit(
+			events.MailboxContentsUpdatedSignal.Emit(
 				mailbox.AccountID,
 				mailbox.ID,
 			)

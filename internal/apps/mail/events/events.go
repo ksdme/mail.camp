@@ -1,4 +1,4 @@
-package mail
+package events
 
 import "github.com/ksdme/mail/internal/utils"
 

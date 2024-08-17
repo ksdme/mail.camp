@@ -3,25 +3,22 @@ package main
 import (
 	"context"
 	"database/sql"
-	"io"
 	"log"
 	"log/slog"
 	"os"
-	"sync"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
-	"github.com/charmbracelet/wish/activeterm"
 	"github.com/charmbracelet/wish/bubbletea"
-	"github.com/emersion/go-smtp"
-	"github.com/ksdme/mail/internal/backend"
-	"github.com/ksdme/mail/internal/bus"
+	"github.com/ksdme/mail/internal/apps"
+	mail "github.com/ksdme/mail/internal/apps/mail/models"
+	"github.com/ksdme/mail/internal/apps/mail/tui"
 	"github.com/ksdme/mail/internal/config"
-	"github.com/ksdme/mail/internal/models"
-	"github.com/ksdme/mail/internal/tui"
-	"github.com/ksdme/mail/internal/tui/colors"
+	core "github.com/ksdme/mail/internal/core/models"
+	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/muesli/termenv"
@@ -31,11 +28,11 @@ import (
 )
 
 func main() {
-	if config.Settings.Debug {
+	if config.Core.Debug {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	sqldb, err := sql.Open("sqlite3", config.Settings.DBURI)
+	sqldb, err := sql.Open("sqlite3", config.Core.DBURI)
 	if err != nil {
 		log.Panicf("opening db failed: %v", err)
 	}
@@ -43,98 +40,73 @@ func main() {
 
 	// Create the database tables if needed.
 	// TODO: Have an actual migration system.
-	if config.Settings.DBMigrate {
+	if config.Core.DBMigrate {
 		slog.Info("creating tables")
 		ctx := context.Background()
-		utils.MustExec(db.NewCreateTable().Model(&models.Account{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&models.Mailbox{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&models.Mail{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&core.Account{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&mail.Mailbox{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&mail.Mail{}).Exec(ctx))
 	}
 
-	// Start the servers and workers.
-	var wg sync.WaitGroup
+	enabledApps := apps.EnabledApps(db)
+	if len(enabledApps) == 0 {
+		log.Panicf("no app is enabled")
+	}
+	for _, app := range enabledApps {
+		name, _, _ := app.Info()
+		slog.Info("enabling app", "name", name)
+	}
 
-	wg.Add(3)
-	go runSSHServer(db, &wg)
-	go runMailServer(db, &wg)
-	go runCleanupWorker(db, &wg)
-
-	wg.Wait()
-}
-
-func runMailServer(db *bun.DB, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	server := smtp.NewServer(backend.NewBackend(db))
-	server.Addr = config.Settings.SMTPBindAddr
-	server.Domain = config.Settings.MXHost
-
-	slog.Info("starting smtp server", "at", config.Settings.SMTPBindAddr)
-	if err := server.ListenAndServe(); err != nil {
-		slog.Error("failed serving smtp server", "err", err)
+	// Start serving.
+	for _, app := range enabledApps {
+		app.Init()
+	}
+	startSSHServer(db, enabledApps)
+	for _, app := range enabledApps {
+		app.CleanUp()
 	}
 }
 
-func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func startSSHServer(db *bun.DB, enabledApps []apps.App) {
 	options := []ssh.Option{
-		wish.WithAddress(config.Settings.SSHBindAddr),
-		wish.WithHostKeyPath(config.Settings.SSHHostKeyPath),
+		wish.WithAddress(config.Core.SSHBindAddr),
+		wish.WithHostKeyPath(config.Core.SSHHostKeyPath),
 	}
 
-	if config.Settings.SSHAuthorizedKeysPath == "" {
+	// Set up access limitations.
+	if config.Core.SSHAuthorizedKeysPath == "" {
 		options = append(options, wish.WithPublicKeyAuth(func(ctx ssh.Context, key ssh.PublicKey) bool {
 			return true
 		}))
 	} else {
-		if _, err := os.Stat(config.Settings.SSHAuthorizedKeysPath); err != nil {
+		if _, err := os.Stat(config.Core.SSHAuthorizedKeysPath); err != nil {
 			panic(errors.Wrap(err, "could not stat authorized_keys file"))
 		}
-		options = append(options, wish.WithAuthorizedKeys(config.Settings.SSHAuthorizedKeysPath))
+		options = append(options, wish.WithAuthorizedKeys(config.Core.SSHAuthorizedKeysPath))
 	}
 
 	options = append(options, wish.WithMiddleware(
-		// Run the bubbletea program.
-		bubbletea.MiddlewareWithColorProfile(func(session ssh.Session) (tea.Model, []tea.ProgramOption) {
-			pty, _, _ := session.Pty()
-			renderer := bubbletea.MakeRenderer(session)
-			slog.Info(
-				"client configured with",
-				"term", pty.Term,
-				"has-dark-background", renderer.HasDarkBackground(),
-			)
-
-			// TODO: We should adjust the color palette based on color profile.
-			palette := colors.DefaultColorDarkPalette()
-			if !renderer.HasDarkBackground() {
-				palette = colors.DefaultLightColorPalette()
-			}
-
-			account := session.Context().Value("account").(models.Account)
-			model := tui.NewModel(db, account, renderer, palette)
-			options := []tea.ProgramOption{tea.WithAltScreen()}
-			return model, options
-		}, termenv.ANSI),
+		// Determine which application is being requested and route the connection to it.
+		// Prefers presenting a tui, but falls back to a non-tui interface if the connection
+		// or the application doesn't support it.
+		handleIncoming(db, enabledApps),
 
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {
-			return func(session ssh.Session) {
-				account, err := models.GetOrCreateAccountFromPublicKey(
-					session.Context(),
+			return func(s ssh.Session) {
+				account, err := core.GetOrCreateAccountFromPublicKey(
+					s.Context(),
 					db,
-					session.PublicKey(),
+					s.PublicKey(),
 				)
 				if err != nil {
-					io.WriteString(session, err.Error()+"\n")
+					utils.WriteStringToSSH(s, err.Error())
+					s.Exit(1)
 					return
 				}
 
-				session.Context().SetValue("account", *account)
-				next(session)
-
-				bus.MailboxContentsUpdatedSignal.CleanUp(account.ID)
-				slog.Debug("cleaning up mailbox signals", "account", account.ID)
+				s.Context().SetValue("account", *account)
+				next(s)
 			}
 		},
 
@@ -156,9 +128,6 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 				)
 			}
 		},
-
-		// Only allow active terminals.
-		activeterm.Middleware(),
 	))
 
 	server, err := wish.NewServer(options...)
@@ -166,24 +135,102 @@ func runSSHServer(db *bun.DB, wg *sync.WaitGroup) {
 		slog.Error("failed creating ssh server", "err", err)
 	}
 
-	slog.Info("starting ssh server", "at", config.Settings.SSHBindAddr)
+	slog.Info("starting ssh server", "at", config.Core.SSHBindAddr)
 	if err = server.ListenAndServe(); err != nil {
 		slog.Error("failed serving ssh connections", "err", err)
 	}
 }
 
-func runCleanupWorker(db *bun.DB, wg *sync.WaitGroup) {
-	defer wg.Done()
+func handleIncoming(db *bun.DB, enabledApps []apps.App) wish.Middleware {
+	return func(next ssh.Handler) ssh.Handler {
+		return func(s ssh.Session) {
+			pty, _, active := s.Pty()
+			renderer := bubbletea.MakeRenderer(s)
+			slog.Info(
+				"client configured with",
+				"active", active,
+				"term", pty.Term,
+				"has-dark-background", renderer.HasDarkBackground(),
+			)
 
-	for {
-		models.CleanupMails(context.Background(), db)
-		time.Sleep(time.Hour)
-	}
-}
+			// Show a menu if no app was explicitly requested.
+			commands := s.Command()
+			if len(commands) == 0 {
+				utils.WriteStringToSSH(s, "todo: implement menu tui")
+				s.Exit(1)
+				return
+			}
 
-func must(result sql.Result, err error) sql.Result {
-	if err != nil {
-		log.Panicf("could not run query: %v", err)
+			// The client invocation arguments.
+			name := strings.ToLower(commands[0])
+			args := commands[1:]
+
+			// Figure out which app needs to be run.
+			var app apps.App = nil
+			for _, element := range enabledApps {
+				current, _, _ := element.Info()
+				if current == name {
+					app = element
+					break
+				}
+			}
+			if app == nil {
+				// TODO: Mention the available names.
+				utils.WriteStringToSSH(s, "todo: could not find an app")
+				s.Exit(1)
+				return
+			}
+
+			// Try to run the tui mode of the application.
+			account := s.Context().Value("account").(core.Account)
+			if active {
+				// TODO: We should adjust the color palette based on color profile.
+				palette := colors.DefaultColorDarkPalette()
+				if !renderer.HasDarkBackground() {
+					palette = colors.DefaultLightColorPalette()
+				}
+
+				program, cleanup, err := app.HandleTUI(args, account, renderer, palette)
+				if err != nil {
+					utils.WriteStringToSSH(s, "todo: something unexpected happened while routing your request")
+					s.Exit(1)
+					return
+				}
+				if program != nil {
+					slog.Debug("running tui program", "app", name)
+
+					if cleanup != nil {
+						defer cleanup()
+					}
+
+					// Run the tui application. Piggy back of the official middleware to handle that bit.
+					middleware := bubbletea.MiddlewareWithColorProfile(func(s ssh.Session) (tea.Model, []tea.ProgramOption) {
+						model := tui.NewModel(db, account, renderer, palette)
+						options := []tea.ProgramOption{tea.WithAltScreen()}
+						return model, options
+					}, termenv.ANSI)
+					middleware(next)(s)
+
+					return
+				}
+			}
+
+			// Run the non-tui mode of the application.
+			handler, cleanup, err := app.Handle(args, s, account)
+			if err != nil {
+				utils.WriteStringToSSH(s, "todo: something unexpected happened while routing your request")
+				s.Exit(1)
+				return
+			}
+			if handler == nil {
+				utils.WriteStringToSSH(s, "todo: something unexpected happened while processing your request")
+				s.Exit(1)
+				return
+			}
+			if cleanup != nil {
+				defer cleanup()
+			}
+			handler()
+		}
 	}
-	return result
 }

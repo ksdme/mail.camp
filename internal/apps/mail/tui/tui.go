@@ -4,12 +4,12 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/apps/mail/tui/email"
+	"github.com/ksdme/mail/internal/apps/mail/tui/home"
 	"github.com/ksdme/mail/internal/config"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
-	"github.com/ksdme/mail/internal/mail/tui/email"
-	"github.com/ksdme/mail/internal/mail/tui/home"
 	"github.com/uptrace/bun"
 )
 

@@ -10,13 +10,13 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/apps/mail/events"
+	"github.com/ksdme/mail/internal/apps/mail/models"
+	"github.com/ksdme/mail/internal/apps/mail/tui/email"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/picker"
 	"github.com/ksdme/mail/internal/core/tui/components/table"
-	"github.com/ksdme/mail/internal/mail"
-	"github.com/ksdme/mail/internal/mail/models"
-	"github.com/ksdme/mail/internal/mail/tui/email"
 	"github.com/ksdme/mail/internal/utils"
 	"github.com/uptrace/bun"
 )
@@ -368,7 +368,7 @@ func (m Model) deleteMailbox(mailbox *mailboxWithUnread) tea.Cmd {
 
 func (m Model) listenToMailboxUpdate() tea.Msg {
 	slog.Debug("listening to mailbox updates", "account", m.account.ID)
-	if value, aborted := mail.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
+	if value, aborted := events.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
 		return MailboxRealTimeUpdate{value}
 	}
 

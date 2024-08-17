@@ -8,8 +8,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
-	"github.com/ksdme/mail/internal/mail/models"
 	"github.com/ksdme/mail/internal/utils"
 )
 
