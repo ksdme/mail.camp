@@ -19,8 +19,8 @@ type Account struct {
 }
 
 func GetOrCreateAccountFromPublicKey(ctx context.Context, db *bun.DB, key ssh.PublicKey) (*Account, error) {
-	// TODO: Normalize the public key.
 	hash := sha256.New()
+	// key.Marshal normalizes the key to a certain extent as well.
 	signature := hex.EncodeToString(hash.Sum(key.Marshal()))
 
 	// Find existing account.
