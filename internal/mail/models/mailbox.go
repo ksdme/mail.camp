@@ -46,7 +46,7 @@ type Mailbox struct {
 }
 
 func (m Mailbox) Email() string {
-	return fmt.Sprintf("%s@%s", m.Name, config.Settings.MXHost)
+	return fmt.Sprintf("%s@%s", m.Name, config.Mail.MXHost)
 }
 
 func createMailbox(ctx context.Context, db *bun.DB, account models.Account, name string) (*Mailbox, error) {
