@@ -1,4 +1,4 @@
-package wordlist
+package utils
 
 var (
 	// https://github.com/powerlanguage/word-lists/blob/master/1000-most-common-words.txt

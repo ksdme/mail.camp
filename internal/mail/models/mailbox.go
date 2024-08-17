@@ -12,7 +12,6 @@ import (
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/utils"
-	"github.com/ksdme/mail/internal/wordlist"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 )
@@ -119,8 +118,7 @@ func CreateRandomMailbox(ctx context.Context, db *bun.DB, account models.Account
 	for {
 		name = ""
 		for len(name) < randomMailboxNameMinSize {
-			index := rand.Intn(len(wordlist.Words))
-			name += wordlist.Words[index]
+			name += utils.Words[rand.Intn(len(utils.Words))]
 		}
 		name = normalizeMailbox(name)
 
