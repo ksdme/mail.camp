@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ksdme/mail/internal/config"
+	"github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/utils"
 	"github.com/ksdme/mail/internal/wordlist"
 	"github.com/pkg/errors"
@@ -40,15 +41,15 @@ type Mailbox struct {
 	Name string `bun:",notnull"`
 
 	// TODO: We need to setup cascade relationship.
-	AccountID int64    `bun:",notnull"`
-	Account   *Account `bun:"rel:belongs-to,join:account_id=id"`
+	AccountID int64           `bun:",notnull"`
+	Account   *models.Account `bun:"rel:belongs-to,join:account_id=id"`
 }
 
 func (m Mailbox) Email() string {
 	return fmt.Sprintf("%s@%s", m.Name, config.Settings.MXHost)
 }
 
-func createMailbox(ctx context.Context, db *bun.DB, account Account, name string) (*Mailbox, error) {
+func createMailbox(ctx context.Context, db *bun.DB, account models.Account, name string) (*Mailbox, error) {
 	name = normalizeMailbox(name)
 	if len(name) <= 2 {
 		return nil, errors.Wrap(
@@ -111,7 +112,7 @@ func createMailbox(ctx context.Context, db *bun.DB, account Account, name string
 }
 
 // Create a mailbox against this account with a random name.
-func CreateRandomMailbox(ctx context.Context, db *bun.DB, account Account) (*Mailbox, error) {
+func CreateRandomMailbox(ctx context.Context, db *bun.DB, account models.Account) (*Mailbox, error) {
 	var name string
 	// Keep looping until we find a free name.
 	// TODO: We should cap this.
@@ -120,8 +121,8 @@ func CreateRandomMailbox(ctx context.Context, db *bun.DB, account Account) (*Mai
 		for len(name) < randomMailboxNameMinSize {
 			index := rand.Intn(len(wordlist.Words))
 			name += wordlist.Words[index]
-			name = normalizeMailbox(name)
 		}
+		name = normalizeMailbox(name)
 
 		if exists, err := db.NewSelect().Model(&Mailbox{}).Where("name = ?", name).Exists(ctx); err != nil {
 			return nil, errors.Wrap(err, "error while finding an unused name")
@@ -134,7 +135,7 @@ func CreateRandomMailbox(ctx context.Context, db *bun.DB, account Account) (*Mai
 }
 
 // Generate a mailbox based on the configured prefix on the account.
-func CreateWildcardMailbox(ctx context.Context, db *bun.DB, account Account, suffix string) (*Mailbox, error) {
+func CreateWildcardMailbox(ctx context.Context, db *bun.DB, account models.Account, suffix string) (*Mailbox, error) {
 	if !account.ReservedPrefix.Valid {
 		return nil, fmt.Errorf("no mailbox prefix configured for the account")
 	}
@@ -169,7 +170,7 @@ func GetOrCreateMailbox(ctx context.Context, db *bun.DB, name string) (*Mailbox,
 	if strings.Contains(name, ".") {
 		sections := strings.SplitN(name, ".", 2)
 
-		account := Account{}
+		account := models.Account{}
 		if err := db.NewSelect().Model(&account).Where("mailbox_prefix = ?", sections[0]).Scan((ctx)); err != nil {
 			if err == sql.ErrNoRows {
 				return nil, fmt.Errorf("unknown mailbox prefix")

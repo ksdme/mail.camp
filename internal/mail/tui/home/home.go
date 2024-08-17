@@ -8,11 +8,11 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ksdme/mail/internal/models"
-	"github.com/ksdme/mail/internal/tui/colors"
-	"github.com/ksdme/mail/internal/tui/components/picker"
-	"github.com/ksdme/mail/internal/tui/components/table"
-	"github.com/ksdme/mail/internal/tui/email"
+	"github.com/ksdme/mail/internal/core/tui/colors"
+	"github.com/ksdme/mail/internal/core/tui/components/picker"
+	"github.com/ksdme/mail/internal/core/tui/components/table"
+	"github.com/ksdme/mail/internal/mail/models"
+	"github.com/ksdme/mail/internal/mail/tui/email"
 	"github.com/ksdme/mail/internal/utils"
 )
 

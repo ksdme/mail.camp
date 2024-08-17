@@ -8,13 +8,14 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/ksdme/mail/internal/bus"
 	"github.com/ksdme/mail/internal/config"
-	"github.com/ksdme/mail/internal/models"
-	"github.com/ksdme/mail/internal/tui/colors"
-	"github.com/ksdme/mail/internal/tui/components/help"
-	"github.com/ksdme/mail/internal/tui/email"
-	"github.com/ksdme/mail/internal/tui/home"
+	core "github.com/ksdme/mail/internal/core/models"
+	"github.com/ksdme/mail/internal/core/tui/colors"
+	"github.com/ksdme/mail/internal/core/tui/components/help"
+	"github.com/ksdme/mail/internal/mail"
+	"github.com/ksdme/mail/internal/mail/models"
+	"github.com/ksdme/mail/internal/mail/tui/email"
+	"github.com/ksdme/mail/internal/mail/tui/home"
 	"github.com/uptrace/bun"
 )
 
@@ -32,7 +33,7 @@ const (
 // Represents the top most model.
 type Model struct {
 	db      *bun.DB
-	account models.Account
+	account core.Account
 
 	mode  mode
 	home  home.Model
@@ -50,7 +51,7 @@ type Model struct {
 
 func NewModel(
 	db *bun.DB,
-	account models.Account,
+	account core.Account,
 	renderer *lipgloss.Renderer,
 	colors colors.ColorPalette,
 ) Model {
@@ -250,7 +251,7 @@ func (m Model) refreshMails(mailbox *home.MailboxWithUnread) tea.Cmd {
 
 func (m Model) listenToMailboxUpdate() tea.Msg {
 	slog.Debug("listening to mailbox updates", "account", m.account.ID)
-	if value, aborted := bus.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
+	if value, aborted := mail.MailboxContentsUpdatedSignal.Wait(m.account.ID); !aborted {
 		return mailboxRealTimeUpdate{value}
 	}
 
