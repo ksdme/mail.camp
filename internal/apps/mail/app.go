@@ -3,12 +3,11 @@ package mail
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/ssh"
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/apps/mail/backend"
 	"github.com/ksdme/mail/internal/apps/mail/events"
@@ -17,6 +16,7 @@ import (
 	"github.com/ksdme/mail/internal/config"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
+	"github.com/ksdme/mail/internal/utils"
 	"github.com/uptrace/bun"
 )
 
@@ -53,20 +53,38 @@ func (m *App) Init() {
 }
 
 func (m *App) Handle(
-	args []string,
-	pipe io.ReadWriter,
-	account core.Account,
-) (func() error, func(), error) {
-	return nil, nil, fmt.Errorf("mail app does not support non-tui mode")
-}
+	next ssh.Handler,
+	session ssh.Session,
 
-func (m *App) HandleTUI(
 	args []string,
 	account core.Account,
+
+	interactive bool,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
-) (tea.Model, func(), error) {
-	return tui.NewModel(m.DB, account, renderer, palette), m.cleanUpSession(account), nil
+) error {
+	// TODO: Because the help message will be empty, we should explicitly mention
+	// that the ssh.camp mail is tui only at the moment.
+	// Email at the moment only supports a tui mode.
+	// But, we could show a help message if args has it.
+	var cli struct{}
+	if utils.ParseArgs(session, "ssh.camp mail", args, &cli) {
+		return nil
+	}
+
+	// Otherwise, complain if we are running in an non-interactive mode.
+	if !interactive {
+		fmt.Fprintln(session, "todo: mail app can only be run interactively")
+		return nil
+	}
+
+	// And, then, run the tea application.
+	utils.RunTeaInSession(
+		next,
+		session,
+		tui.NewModel(m.DB, account, renderer, palette),
+	)
+	return nil
 }
 
 func (m *App) CleanUp() {

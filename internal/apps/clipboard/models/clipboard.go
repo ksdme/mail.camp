@@ -42,19 +42,15 @@ func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.
 
 	// TODO: Validate size and existence.
 
-	// Remove any existing clipboard items on this account.
-	_, err := db.NewDelete().
-		Model(&ClipboardItem{}).
-		Where("account_id = ?", account.ID).
-		Exec(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not empty clipboard items")
+	// Clear out the existing clipboard.
+	if err := DeleteClipboard(ctx, db, account); err != nil {
+		return err
 	}
 
 	// Insert the new item.
 	// Prepare none and add it to the input.
 	nonce := make([]byte, 64)
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
 		return errors.Wrap(err, "could not generate iv")
 	}
 	value = append(value, nonce...)
@@ -108,6 +104,18 @@ func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, accou
 
 	// Remove the nonce.
 	return decrypted[:len(decrypted)-64], nil
+}
+
+// Remove any existing clipboard items on this account.
+func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) error {
+	_, err := db.NewDelete().
+		Model(&ClipboardItem{}).
+		Where("account_id = ?", account.ID).
+		Exec(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not empty clipboard items")
+	}
+	return nil
 }
 
 func makeCipher(key ssh.PublicKey) (cipher.Block, error) {
