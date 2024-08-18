@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/ksdme/mail/internal/apps"
+	clipboard "github.com/ksdme/mail/internal/apps/clipboard/models"
 	mail "github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/apps/mail/tui"
 	"github.com/ksdme/mail/internal/config"
@@ -47,6 +48,7 @@ func main() {
 		utils.MustExec(db.NewCreateTable().Model(&core.Account{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mail.Mailbox{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mail.Mail{}).Exec(ctx))
+		utils.MustExec(db.NewCreateIndex().Model(&clipboard.ClipboardItem{}).Exec(ctx))
 	}
 
 	enabledApps := apps.EnabledApps(db)

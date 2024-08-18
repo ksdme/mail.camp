@@ -12,6 +12,8 @@ import (
 type coreSettings struct {
 	Debug bool `envDefault:"true"`
 
+	Entropy string `env:"ENTROPY,required"`
+
 	DBURI     string `env:"DB_URI" envDefault:"file:db.sqlite3"`
 	DBMigrate bool   `env:"DB_MIGRATE"`
 
