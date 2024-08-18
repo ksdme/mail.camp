@@ -193,7 +193,8 @@ func handleIncoming(enabledApps []apps.App) wish.Middleware {
 			account := s.Context().Value("account").(core.Account)
 			if err := app.Handle(next, s, args, account, active, renderer, palette); err != nil {
 				slog.Error("could not process the request", "app", name, "account", account.ID, "err", err, "args", args)
-				fmt.Fprintln(s, "todo: something unexpected happened while processing your request")
+				err = errors.Wrap(err, "could not process your request")
+				fmt.Fprintln(s, err.Error())
 				s.Exit(1)
 				return
 			}

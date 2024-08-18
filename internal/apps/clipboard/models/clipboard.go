@@ -51,7 +51,7 @@ func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.
 	// Prepare none and add it to the input.
 	nonce := make([]byte, 64)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return errors.Wrap(err, "could not generate iv")
+		return errors.Wrap(err, "could not generate nonce")
 	}
 	value = append(value, nonce...)
 
@@ -120,9 +120,13 @@ func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) erro
 
 func makeCipher(key ssh.PublicKey) (cipher.Block, error) {
 	basis := append(key.Marshal(), []byte(config.Core.Entropy)...)
+	hash := sha256.New()
+	if _, err := hash.Write(basis); err != nil {
+		return nil, errors.Wrap(err, "could not hash key")
+	}
 
 	// TODO: Use a better mode with actual IV.
-	cipher, err := aes.NewCipher(sha256.New().Sum(basis))
+	cipher, err := aes.NewCipher(sha256.New().Sum(nil))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate cipher")
 	}

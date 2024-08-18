@@ -27,7 +27,7 @@ type App struct {
 }
 
 func (m *App) Info() (string, string, string) {
-	return "mail", "Mail", "Temporary mail"
+	return "mail", "Mail", "Mail"
 }
 
 func (m *App) Init() {
@@ -79,11 +79,13 @@ func (m *App) Handle(
 	}
 
 	// And, then, run the tea application.
+	defer m.cleanUpSession(account)
 	utils.RunTeaInSession(
 		next,
 		session,
 		tui.NewModel(m.DB, account, renderer, palette),
 	)
+
 	return nil
 }
 

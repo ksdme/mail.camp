@@ -21,7 +21,8 @@ type coreSettings struct {
 	SSHAuthorizedKeysPath string `env:"SSH_AUTHORIZED_KEYS_PATH"`
 	SSHBindAddr           string `env:"SSH_BIND_ADDR" envDefault:"127.0.0.1:2222"`
 
-	MailAppEnabled bool `env:"MAIL_APP_ENABLED" envDefault:"true"`
+	MailAppEnabled      bool `env:"MAIL_APP_ENABLED" envDefault:"true"`
+	ClipboardAppEnabled bool `env:"CLIPBOARD_APP_ENABLED" envDefault:"true"`
 }
 
 // Settings related to the mail app.
@@ -29,6 +30,11 @@ type mailSettings struct {
 	MXHost       string `env:"MX_HOST" envDefault:"localhost"`
 	SMTPBindAddr string `env:"SMTP_BIND_ADDR" envDefault:"127.0.0.1:1025"`
 	Signature    string `env:",expand" envDefault:"${MX_HOST}"`
+}
+
+// Settings related to the clipboard app.
+type clipboardSettings struct {
+	MaxContentSize string `env:"CLIPBOARD_MAX_CONTENTS_SIZE" envDefault:"8208"`
 }
 
 func init() {
@@ -41,6 +47,12 @@ func init() {
 			panic(fmt.Sprintf("could not parse mail configuration: %v", err))
 		}
 	}
+
+	if Core.ClipboardAppEnabled {
+		if err := env.Parse(&Clipboard); err != nil {
+			panic(fmt.Sprintf("could not parse clipboard configuration: %v", err))
+		}
+	}
 }
 
 var Core coreSettings
@@ -49,3 +61,4 @@ var Core coreSettings
 // we don't accidentally read it when the app is disabled, having it be global
 // makes our life slightly easier for now.
 var Mail mailSettings
+var Clipboard clipboardSettings
