@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
+	"github.com/ksdme/mail/internal/apps/clipboard/tui"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
@@ -61,7 +62,12 @@ func (a *App) Handle(
 	// Show a tui only if we are in interactive mode and there are no
 	// explicit arguments.
 	if interactive && len(args) == 0 {
-		// TODO: Handle TUI
+		utils.RunTeaInSession(next, session, tui.NewModel(
+			a.DB,
+			renderer,
+			palette,
+		))
+		return nil
 	}
 
 	if interactive {
