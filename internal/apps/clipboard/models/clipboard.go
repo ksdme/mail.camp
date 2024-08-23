@@ -27,6 +27,7 @@ import (
 type ClipboardItem struct {
 	ID int64 `bun:",pk,autoincrement"`
 
+	IV    []byte `bun:",notnull"`
 	Value []byte `bun:",notnull"`
 
 	// TODO: We need to setup cascade relationship.
@@ -47,27 +48,27 @@ func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.
 		return err
 	}
 
-	// Insert the new item.
-	// Prepare none and add it to the input.
-	nonce := make([]byte, 64)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return errors.Wrap(err, "could not generate nonce")
-	}
-	value = append(value, nonce...)
-
-	// Generate the key and cipher.
-	cipher, err := makeCipher(key)
+	// Generate the cipher.
+	aes, err := makeAESCipher(key)
 	if err != nil {
 		return err
 	}
 
-	// Encrypt the value.
-	encrypted := make([]byte, len(value))
-	cipher.Encrypt(encrypted, value)
+	// Generate a random IV.
+	iv := make([]byte, aes.BlockSize())
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return errors.Wrap(err, "could not generate iv")
+	}
+
+	// Encrypt.
+	ciphered := make([]byte, len(value))
+	cfb := cipher.NewCFBEncrypter(aes, iv)
+	cfb.XORKeyStream(ciphered, value)
 
 	// Write the value.
 	item := ClipboardItem{
-		Value:     encrypted,
+		IV:        iv,
+		Value:     ciphered,
 		AccountID: account.ID,
 	}
 	if _, err = db.NewInsert().Model(&item).Exec(ctx); err != nil {
@@ -77,8 +78,13 @@ func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.
 	return nil
 }
 
+type DecodedClipboardItem struct {
+	Value     []byte
+	CreatedAt time.Time
+}
+
 // Returns a decrypted clipboard item if it exists, otherwise, nil.
-func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, account core.Account) ([]byte, error) {
+func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, account core.Account) (*DecodedClipboardItem, error) {
 	// Find the item.
 	var item ClipboardItem
 	err := db.
@@ -94,16 +100,21 @@ func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, accou
 		return nil, errors.Wrap(err, "could not query clipboard items")
 	}
 
-	// Decrypt the value.
-	cipher, err := makeCipher(key)
+	// Generate cipher.
+	aes, err := makeAESCipher(key)
 	if err != nil {
 		return nil, nil
 	}
-	decrypted := make([]byte, len(item.Value))
-	cipher.Decrypt(decrypted, item.Value)
 
-	// Remove the nonce.
-	return decrypted[:len(decrypted)-64], nil
+	// Decipher.
+	deciphered := make([]byte, len(item.Value))
+	cfb := cipher.NewCFBDecrypter(aes, item.IV)
+	cfb.XORKeyStream(deciphered, item.Value)
+
+	return &DecodedClipboardItem{
+		Value:     deciphered,
+		CreatedAt: item.CreatedAt,
+	}, nil
 }
 
 // Remove any existing clipboard items on this account.
@@ -118,15 +129,14 @@ func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) erro
 	return nil
 }
 
-func makeCipher(key ssh.PublicKey) (cipher.Block, error) {
+func makeAESCipher(key ssh.PublicKey) (cipher.Block, error) {
 	basis := append(key.Marshal(), []byte(config.Core.Entropy)...)
 	hash := sha256.New()
 	if _, err := hash.Write(basis); err != nil {
 		return nil, errors.Wrap(err, "could not hash key")
 	}
 
-	// TODO: Use a better mode with actual IV.
-	cipher, err := aes.NewCipher(sha256.New().Sum(nil))
+	cipher, err := aes.NewCipher(hash.Sum(nil))
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate cipher")
 	}

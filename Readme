@@ -1,5 +1,32 @@
 ### Plan
 
+#### Core
+
+Pending
+- Alias keys
+- Temporary login
+- Help
+- Menu
+- Support timeout
+
+#### Clipboard
+
+Pending
+- Non interactive mode
+- Initial application command
+- Save the value to table
+- Clean up periodically
+- Clean up value on read
+- Clean up on startup
+- Show value in case of tui
+- Validate the clipboard contents, size
+- Support realtime updates to the tui
+- Consolidate all the cli configuration to top command
+
+Done
+- Create a package
+- Encrypt values
+
 #### mail
 
 MVP

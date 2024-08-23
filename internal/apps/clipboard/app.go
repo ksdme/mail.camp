@@ -52,7 +52,6 @@ func (a *App) Handle(
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
 ) error {
-	fmt.Println(len(args))
 	// Handle cli level behavior.
 	var cli cli
 	if utils.ParseArgs(session, "ssh.camp clipboard", args, &cli) {
@@ -64,6 +63,8 @@ func (a *App) Handle(
 	if interactive && len(args) == 0 {
 		utils.RunTeaInSession(next, session, tui.NewModel(
 			a.DB,
+			account,
+			session.PublicKey(),
 			renderer,
 			palette,
 		))
@@ -107,12 +108,12 @@ func (a *App) Handle(
 		return nil
 
 	default:
-		value, err := models.GetClipboardValue(session.Context(), a.DB, session.PublicKey(), account)
+		item, err := models.GetClipboardValue(session.Context(), a.DB, session.PublicKey(), account)
 		if err != nil {
 			return errors.Wrap(err, "could not fetch the clipboard")
 		}
 
-		_, err = session.Write(value)
+		_, err = session.Write(item.Value)
 		if err != nil {
 			slog.Debug("could not write the clipboard to session")
 			return errors.Wrap(err, "could not write to the session")

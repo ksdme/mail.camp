@@ -1,13 +1,16 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
+	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 	"github.com/ksdme/mail/internal/utils"
@@ -19,9 +22,11 @@ import (
 // At the moment, it only displays the current contents on the
 // clipboard and/or the instructions on how to use it.
 type Model struct {
-	db *bun.DB
+	db      *bun.DB
+	account core.Account
+	key     ssh.PublicKey
 
-	item *models.ClipboardItem
+	item *models.DecodedClipboardItem
 
 	width  int
 	height int
@@ -33,14 +38,19 @@ type Model struct {
 	quitting bool
 }
 
-func NewModel(db *bun.DB, renderer *lipgloss.Renderer, palette colors.ColorPalette) Model {
+func NewModel(
+	db *bun.DB,
+	account core.Account,
+	key ssh.PublicKey,
+	renderer *lipgloss.Renderer,
+	palette colors.ColorPalette,
+) Model {
 	return Model{
-		db: db,
+		db:      db,
+		account: account,
+		key:     key,
 
-		item: &models.ClipboardItem{
-			Value:     []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit"),
-			CreatedAt: time.Now(),
-		},
+		item: nil,
 
 		renderer: renderer,
 		palette:  palette,
@@ -49,7 +59,7 @@ func NewModel(db *bun.DB, renderer *lipgloss.Renderer, palette colors.ColorPalet
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.loadClipboard
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -70,6 +80,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.QuitMsg:
 		m.quitting = true
+		return m, nil
+
+	case *models.DecodedClipboardItem:
+		m.item = msg
 		return m, nil
 	}
 
@@ -194,6 +208,12 @@ func (m Model) empty(width int) string {
 		Render(tip)
 
 	return lipgloss.JoinVertical(lipgloss.Top, msg, tip)
+}
+
+// Load the clipboard item from the database.
+func (m Model) loadClipboard() tea.Msg {
+	item, _ := models.GetClipboardValue(context.TODO(), m.db, m.key, m.account)
+	return item
 }
 
 type KeyMap struct {
