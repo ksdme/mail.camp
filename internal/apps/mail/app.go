@@ -79,7 +79,7 @@ func (m *App) Handle(
 	}
 
 	// And, then, run the tea application.
-	defer m.cleanUpSession(account)
+	defer events.MailboxContentsUpdatedSignal.CleanUp(account.ID)
 	utils.RunTeaInSession(
 		next,
 		session,
@@ -91,10 +91,4 @@ func (m *App) Handle(
 
 func (m *App) CleanUp() {
 	m.server.Shutdown(context.TODO())
-}
-
-func (m *App) cleanUpSession(account core.Account) func() {
-	return func() {
-		events.MailboxContentsUpdatedSignal.CleanUp(account.ID)
-	}
 }

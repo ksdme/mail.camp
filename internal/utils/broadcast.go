@@ -7,20 +7,20 @@ import (
 // A broadcasting event bus. It also has the additional functionality
 // of always cleaning up after itself. You can also emit messages to
 // topics that don't exist yet. Those messages will however be drained away.
-type BroadcastBus[T any] struct {
-	channels map[int64][]chan T
+type BroadcastBus[S comparable, M any] struct {
+	channels map[S][]chan M
 	lock     sync.Mutex
 }
 
-func NewBroadcastBus[T any]() BroadcastBus[T] {
-	return BroadcastBus[T]{
-		channels: make(map[int64][]chan T),
+func NewBroadcastBus[S comparable, M any]() BroadcastBus[S, M] {
+	return BroadcastBus[S, M]{
+		channels: make(map[S][]chan M),
 		lock:     sync.Mutex{},
 	}
 }
 
 // Emit a message on a topic with a message.
-func (b *BroadcastBus[T]) Emit(subject int64, message T) {
+func (b *BroadcastBus[S, M]) Emit(subject S, message M) {
 	b.lock.Lock()
 	channels, ok := b.channels[subject]
 	if ok {
@@ -40,28 +40,28 @@ func (b *BroadcastBus[T]) Emit(subject int64, message T) {
 // Wait for a message on the topic. Returns the message and a bool
 // flag that indicates if the wait was aborted. This usually happens
 // when the topic is being cleaned up.
-func (b *BroadcastBus[T]) Wait(subject int64) (T, bool) {
+func (b *BroadcastBus[S, M]) Wait(subject S) (M, bool) {
 	b.lock.Lock()
-	channel := make(chan T)
+	channel := make(chan M)
 	channels, ok := b.channels[subject]
 	if ok {
 		b.channels[subject] = append(channels, channel)
 	} else {
-		b.channels[subject] = []chan T{channel}
+		b.channels[subject] = []chan M{channel}
 	}
 	b.lock.Unlock()
 
 	if value, ok := <-channel; ok {
 		return value, false
 	} else {
-		var zero T
+		var zero M
 		return zero, true
 	}
 }
 
 // Clean up a topic on the bus. All pending waits will resolve
 // with a done flag.
-func (b *BroadcastBus[T]) CleanUp(subject int64) {
+func (b *BroadcastBus[S, M]) CleanUp(subject S) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
