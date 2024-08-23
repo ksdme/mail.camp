@@ -117,7 +117,7 @@ func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, accou
 	}, nil
 }
 
-// Remove any existing clipboard items on this account.
+// Remove existing clipboard items on this account.
 func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) error {
 	_, err := db.NewDelete().
 		Model(&ClipboardItem{}).
@@ -127,6 +127,24 @@ func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) erro
 		return errors.Wrap(err, "could not empty clipboard items")
 	}
 	return nil
+}
+
+// Remove all the clipboard items.
+func CleanAll(ctx context.Context, db *bun.DB) error {
+	_, err := db.NewDelete().Model(&ClipboardItem{}).Exec(ctx)
+	slog.Info("cleaning up all clipboard items")
+	return err
+}
+
+// Remove all the expired clipboard items.
+func CleanUp(ctx context.Context, db *bun.DB) error {
+	_, err := db.
+		NewDelete().
+		Model(&ClipboardItem{}).
+		Where("created_at <= ?", time.Now().Add(5*time.Minute)).
+		Exec(ctx)
+	slog.Info("cleaning up expired clipboard items")
+	return err
 }
 
 func makeAESCipher(key ssh.PublicKey) (cipher.Block, error) {

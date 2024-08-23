@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"time"
@@ -214,7 +215,9 @@ func (m Model) empty(width int) string {
 func (m Model) loadClipboard() tea.Msg {
 	// TODO: Handler error.
 	item, err := models.GetClipboardValue(context.TODO(), m.db, m.key, m.account)
-	slog.Error("could not get clipboard value", "err", err)
+	if err != sql.ErrNoRows {
+		slog.Error("could not get clipboard value", "err", err)
+	}
 	return item
 }
 

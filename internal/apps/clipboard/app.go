@@ -1,9 +1,11 @@
 package clipboard
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
@@ -38,6 +40,15 @@ func (a *App) Info() (string, string, string) {
 
 func (a *App) Init() {
 	slog.Debug("initializing clipboard")
+
+	// Set up clean up.
+	models.CleanAll(context.Background(), a.DB)
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			models.CleanUp(context.Background(), a.DB)
+		}
+	}()
 }
 
 // Handle the incoming connection.
