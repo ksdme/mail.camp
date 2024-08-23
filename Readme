@@ -16,7 +16,6 @@ Pending
 - Initial application command
 - Clean up value on read
 - Validate the clipboard contents, size
-- Support realtime updates to the tui
 - Consolidate all the cli configuration to top command
 
 Done
@@ -27,6 +26,7 @@ Done
 - Manually clearing clipboard
 - Clean up periodically
 - Clean up on startup
+- Support realtime updates to the tui
 
 #### mail
 
