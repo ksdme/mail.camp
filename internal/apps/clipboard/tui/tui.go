@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -75,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case key.Matches(msg, m.keymap.Clear):
-			return m, nil
+			return m, m.clearClipboard
 		}
 
 	case tea.QuitMsg:
@@ -210,9 +211,19 @@ func (m Model) empty(width int) string {
 	return lipgloss.JoinVertical(lipgloss.Top, msg, tip)
 }
 
-// Load the clipboard item from the database.
 func (m Model) loadClipboard() tea.Msg {
-	item, _ := models.GetClipboardValue(context.TODO(), m.db, m.key, m.account)
+	// TODO: Handler error.
+	item, err := models.GetClipboardValue(context.TODO(), m.db, m.key, m.account)
+	slog.Error("could not get clipboard value", "err", err)
+	return item
+}
+
+func (m Model) clearClipboard() tea.Msg {
+	// TODO: Handle error.
+	err := models.DeleteClipboard(context.TODO(), m.db, m.account)
+	slog.Error("could not clear the clipboard", "err", err)
+
+	var item *models.DecodedClipboardItem = nil
 	return item
 }
 
