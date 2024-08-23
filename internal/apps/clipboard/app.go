@@ -20,15 +20,15 @@ import (
 )
 
 type cli struct {
-	Get *struct{} `arg:"subcommand:get"`
+	Get *struct{} `arg:"subcommand:get" help:"retrieve contents currently on the clipboard"`
 
 	// TODO: Support explicitly passing contents as a positional
 	// argument to this subcommand. This doesn't work at the moment
 	// because something somewhere is breaking down a value with spaces
 	// into separate arguments.
-	Put *struct{} `arg:"subcommand:put"`
+	Put *struct{} `arg:"subcommand:put" help:"put text on the clipboard"`
 
-	Clear *struct{} `arg:"subcommand:clear"`
+	Clear *struct{} `arg:"subcommand:clear" help:"clear the contents on the clipboard"`
 }
 
 type App struct {
@@ -124,6 +124,9 @@ func (a *App) Handle(
 		item, err := models.GetClipboardValue(session.Context(), a.DB, session.PublicKey(), account)
 		if err != nil {
 			return errors.Wrap(err, "could not fetch the clipboard")
+		}
+		if item == nil {
+			return nil
 		}
 
 		_, err = session.Write(item.Value)
