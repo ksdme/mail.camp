@@ -12,8 +12,6 @@ Pending
 #### Clipboard
 
 Pending
-- Non interactive mode
-- Initial application command
 - Clean up value on read
 - Validate the clipboard contents, size
 - Consolidate all the cli configuration to top command
@@ -27,6 +25,8 @@ Done
 - Clean up periodically
 - Clean up on startup
 - Support realtime updates to the tui
+- Non interactive mode
+- Initial application command
 
 #### mail
 

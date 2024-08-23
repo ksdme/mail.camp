@@ -28,7 +28,7 @@ type App interface {
 		interactive bool,
 		renderer *lipgloss.Renderer,
 		palette colors.ColorPalette,
-	) error
+	) (int, error)
 
 	// Called to close and cleanup the application during shutdown.
 	CleanUp()

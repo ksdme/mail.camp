@@ -163,9 +163,10 @@ func handleIncoming(enabledApps []apps.App) wish.Middleware {
 			}
 
 			// Show a menu if no app was explicitly requested.
+			stderr := s.Stderr()
 			commands := s.Command()
 			if len(commands) == 0 {
-				fmt.Fprintln(s, "todo: implement menu tui")
+				fmt.Fprintln(stderr, "todo: implement menu tui")
 				s.Exit(1)
 				return
 			}
@@ -185,18 +186,24 @@ func handleIncoming(enabledApps []apps.App) wish.Middleware {
 			}
 			if app == nil {
 				// TODO: Mention the available names.
-				fmt.Fprintln(s, "todo: could not find an app")
+				fmt.Fprintln(stderr, "could not find an app")
 				s.Exit(1)
 				return
 			}
 
 			account := s.Context().Value("account").(core.Account)
-			if err := app.Handle(next, s, args, account, active, renderer, palette); err != nil {
+			if retcode, err := app.Handle(next, s, args, account, active, renderer, palette); err != nil {
 				slog.Error("could not process the request", "app", name, "account", account.ID, "err", err, "args", args)
+
 				err = errors.Wrap(err, "could not process your request")
-				fmt.Fprintln(s, err.Error())
-				s.Exit(1)
-				return
+				fmt.Fprintln(stderr, err.Error())
+
+				if retcode <= 0 {
+					retcode = 1
+				}
+				s.Exit(retcode)
+			} else {
+				s.Exit(retcode)
 			}
 		}
 	}

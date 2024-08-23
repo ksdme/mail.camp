@@ -2,7 +2,6 @@ package clipboard
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"time"
@@ -63,11 +62,11 @@ func (a *App) Handle(
 	interactive bool,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
-) error {
+) (int, error) {
 	// Handle cli level behavior.
 	var cli cli
-	if utils.ParseArgs(session, "ssh.camp clipboard", args, &cli) {
-		return nil
+	if retcode, consumed := utils.ParseArgs(session, "ssh.camp clipboard", args, &cli); consumed {
+		return retcode, nil
 	}
 
 	// Show a tui only if we are in interactive mode and there are no
@@ -81,12 +80,7 @@ func (a *App) Handle(
 			renderer,
 			palette,
 		))
-		return nil
-	}
-
-	if interactive {
-		fmt.Fprintln(session, "todo: interactive mode is not supported for this command")
-		return nil
+		return 0, nil
 	}
 
 	// Otherwise, process the command.
@@ -95,7 +89,7 @@ func (a *App) Handle(
 		// Read the value from the connection.
 		value, err := io.ReadAll(session)
 		if err != nil {
-			return errors.Wrap(err, "could not read contents to put")
+			return 1, errors.Wrap(err, "could not read contents to put")
 		}
 
 		// Save the value.
@@ -107,35 +101,35 @@ func (a *App) Handle(
 			account,
 		)
 		if err != nil {
-			return errors.Wrap(err, "could not put to the clipboard")
+			return 1, errors.Wrap(err, "could not put to the clipboard")
 		}
 
-		return nil
+		return 0, nil
 
 	case cli.Clear != nil:
 		err := models.DeleteClipboard(session.Context(), a.DB, account)
 		if err != nil {
-			return errors.Wrap(err, "could not clear the clipboard")
+			return 1, errors.Wrap(err, "could not clear the clipboard")
 		}
 
-		return nil
+		return 0, nil
 
 	default:
 		item, err := models.GetClipboardValue(session.Context(), a.DB, session.PublicKey(), account)
 		if err != nil {
-			return errors.Wrap(err, "could not fetch the clipboard")
+			return 1, errors.Wrap(err, "could not fetch the clipboard")
 		}
 		if item == nil {
-			return nil
+			return 1, nil
 		}
 
 		_, err = session.Write(item.Value)
 		if err != nil {
 			slog.Debug("could not write the clipboard to session")
-			return errors.Wrap(err, "could not write to the session")
+			return 1, errors.Wrap(err, "could not write to the session")
 		}
 
-		return nil
+		return 0, nil
 	}
 }
 

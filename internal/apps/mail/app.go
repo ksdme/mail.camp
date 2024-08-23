@@ -62,20 +62,20 @@ func (m *App) Handle(
 	interactive bool,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
-) error {
+) (int, error) {
 	// TODO: Because the help message will be empty, we should explicitly mention
 	// that the ssh.camp mail is tui only at the moment.
 	// Email at the moment only supports a tui mode.
 	// But, we could show a help message if args has it.
 	var cli struct{}
-	if utils.ParseArgs(session, "ssh.camp mail", args, &cli) {
-		return nil
+	if retcode, consumed := utils.ParseArgs(session, "ssh.camp mail", args, &cli); consumed {
+		return retcode, nil
 	}
 
 	// Otherwise, complain if we are running in an non-interactive mode.
 	if !interactive {
-		fmt.Fprintln(session, "todo: mail app can only be run interactively")
-		return nil
+		fmt.Fprintln(session, "mail app can only be run interactively")
+		return 1, nil
 	}
 
 	// And, then, run the tea application.
@@ -85,8 +85,7 @@ func (m *App) Handle(
 		session,
 		tui.NewModel(m.DB, account, renderer, palette),
 	)
-
-	return nil
+	return 0, nil
 }
 
 func (m *App) CleanUp() {
