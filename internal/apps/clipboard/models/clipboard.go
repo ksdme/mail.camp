@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/ssh"
+	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/config"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/pkg/errors"
@@ -74,6 +75,9 @@ func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.
 	if _, err = db.NewInsert().Model(&item).Exec(ctx); err != nil {
 		return errors.Wrap(err, "could not write to database")
 	}
+
+	// If there is an interactive session somewhere, trigger an update there.
+	events.ClipboardContentsUpdatedSignal.Emit(account.ID, item.ID)
 
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/tui"
 	core "github.com/ksdme/mail/internal/core/models"
@@ -72,6 +73,7 @@ func (a *App) Handle(
 	// Show a tui only if we are in interactive mode and there are no
 	// explicit arguments.
 	if interactive && len(args) == 0 {
+		defer events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
 		utils.RunTeaInSession(next, session, tui.NewModel(
 			a.DB,
 			account,

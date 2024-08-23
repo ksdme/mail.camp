@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
@@ -19,6 +20,8 @@ import (
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/uptrace/bun"
 )
+
+type clipboardRealtimeUpdate struct{}
 
 // The clipboard tui.
 // At the moment, it only displays the current contents on the
@@ -61,7 +64,10 @@ func NewModel(
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.loadClipboard
+	return tea.Batch(
+		m.loadClipboard,
+		m.listenToClipboardUpdate,
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -83,6 +89,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.QuitMsg:
 		m.quitting = true
 		return m, nil
+
+	case clipboardRealtimeUpdate:
+		return m, tea.Batch(
+			m.loadClipboard,
+			m.listenToClipboardUpdate,
+		)
 
 	case *models.DecodedClipboardItem:
 		m.item = msg
@@ -210,6 +222,15 @@ func (m Model) empty(width int) string {
 		Render(tip)
 
 	return lipgloss.JoinVertical(lipgloss.Top, msg, tip)
+}
+
+func (m Model) listenToClipboardUpdate() tea.Msg {
+	slog.Debug("listening to clipboard updates", "account", m.account.ID)
+	if _, aborted := events.ClipboardContentsUpdatedSignal.Wait(m.account.ID); !aborted {
+		return clipboardRealtimeUpdate{}
+	}
+
+	return nil
 }
 
 func (m Model) loadClipboard() tea.Msg {
