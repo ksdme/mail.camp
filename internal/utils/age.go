@@ -39,5 +39,5 @@ func text(value float64, singular string, plural string) string {
 	if value >= 2 {
 		suffix = plural
 	}
-	return fmt.Sprintf("%d %s", int(value), suffix)
+	return fmt.Sprintf("%d%s", int(value), suffix)
 }
