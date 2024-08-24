@@ -7,17 +7,19 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/ksdme/mail/internal/apps"
-	clipboard "github.com/ksdme/mail/internal/apps/clipboard/models"
-	mail "github.com/ksdme/mail/internal/apps/mail/models"
+	"github.com/ksdme/mail/internal/apps/clipboard"
+	clipboardmodels "github.com/ksdme/mail/internal/apps/clipboard/models"
+	"github.com/ksdme/mail/internal/apps/mail"
+	mailmodels "github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/config"
-	core "github.com/ksdme/mail/internal/core/models"
+	"github.com/ksdme/mail/internal/core"
+	coremodels "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
@@ -43,34 +45,42 @@ func main() {
 	if config.Core.DBMigrate {
 		slog.Info("creating tables")
 		ctx := context.Background()
-		utils.MustExec(db.NewCreateTable().Model(&core.Account{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&mail.Mailbox{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&mail.Mail{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&clipboard.ClipboardItem{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&coremodels.Account{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mailbox{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mail{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&clipboardmodels.ClipboardItem{}).Exec(ctx))
 	}
 
-	// TODO: On startup, clear the clipboard table.
-
-	enabledApps := apps.EnabledApps(db)
-	if len(enabledApps) == 0 {
+	apps := []core.App{}
+	if config.Core.MailAppEnabled {
+		apps = append(apps, &mail.App{
+			DB: db,
+		})
+	}
+	if config.Core.ClipboardAppEnabled {
+		apps = append(apps, &clipboard.App{
+			DB: db,
+		})
+	}
+	if len(apps) == 0 {
 		log.Panicf("no app is enabled")
 	}
-	for _, app := range enabledApps {
+
+	for _, app := range apps {
 		name, _, _ := app.Info()
 		slog.Info("enabling app", "name", name)
 	}
-
-	// Start serving.
-	for _, app := range enabledApps {
+	for _, app := range apps {
 		app.Init()
 	}
-	startSSHServer(db, enabledApps)
-	for _, app := range enabledApps {
-		app.CleanUp()
+	for _, app := range apps {
+		defer app.CleanUp()
 	}
+
+	startSSHServer(db, apps)
 }
 
-func startSSHServer(db *bun.DB, enabledApps []apps.App) {
+func startSSHServer(db *bun.DB, enabledApps []core.App) {
 	options := []ssh.Option{
 		wish.WithAddress(config.Core.SSHBindAddr),
 		wish.WithHostKeyPath(config.Core.SSHHostKeyPath),
@@ -97,7 +107,7 @@ func startSSHServer(db *bun.DB, enabledApps []apps.App) {
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {
 			return func(s ssh.Session) {
-				account, err := core.GetOrCreateAccountFromPublicKey(
+				account, err := coremodels.GetOrCreateAccountFromPublicKey(
 					s.Context(),
 					db,
 					s.PublicKey(),
@@ -144,9 +154,11 @@ func startSSHServer(db *bun.DB, enabledApps []apps.App) {
 	}
 }
 
-func handleIncoming(enabledApps []apps.App) wish.Middleware {
+func handleIncoming(enabledApps []core.App) wish.Middleware {
 	return func(next ssh.Handler) ssh.Handler {
 		return func(s ssh.Session) {
+			stderr := s.Stderr()
+
 			pty, _, active := s.Pty()
 			renderer := bubbletea.MakeRenderer(s)
 			slog.Info(
@@ -163,20 +175,32 @@ func handleIncoming(enabledApps []apps.App) wish.Middleware {
 			}
 
 			// Show a menu if no app was explicitly requested.
-			stderr := s.Stderr()
-			commands := s.Command()
-			if len(commands) == 0 {
+			command := s.Command()
+			if len(command) == 0 {
 				fmt.Fprintln(stderr, "todo: implement menu tui")
 				s.Exit(1)
 				return
 			}
 
 			// The client invocation arguments.
-			name := strings.ToLower(commands[0])
-			args := commands[1:]
+			var args apps.AppArgs
+			if retcode, consumed := utils.ParseArgs(s, "ssh.camp", command, &args); consumed {
+				s.Exit(retcode)
+				return
+			}
+
+			// TODO: Eh, figure out a way to not have to do this.
+			var name string
+			switch {
+			case args.Mail != nil:
+				name = "mail"
+
+			case args.Clipboard != nil:
+				name = "clipboard"
+			}
 
 			// Figure out which app needs to be run.
-			var app apps.App = nil
+			var app core.App = nil
 			for _, element := range enabledApps {
 				current, _, _ := element.Info()
 				if current == name {
@@ -184,16 +208,22 @@ func handleIncoming(enabledApps []apps.App) wish.Middleware {
 					break
 				}
 			}
+			// Technically, because the argument parser handles validating the available
+			// app names, we should not reach to this point unless the switch above is
+			// incomplete.
 			if app == nil {
-				// TODO: Mention the available names.
-				fmt.Fprintln(stderr, "could not find an app")
+				if len(name) == 0 {
+					fmt.Fprintf(stderr, "unknown app '%s'\n", name)
+				} else {
+					fmt.Fprintf(stderr, "%s app is disabled\n", name)
+				}
 				s.Exit(1)
 				return
 			}
 
-			account := s.Context().Value("account").(core.Account)
+			account := s.Context().Value("account").(coremodels.Account)
 			if retcode, err := app.Handle(next, s, args, account, active, renderer, palette); err != nil {
-				slog.Error("could not process the request", "app", name, "account", account.ID, "err", err, "args", args)
+				slog.Error("could not process the request", "app", "n", "account", account.ID, "err", err, "args", command)
 
 				err = errors.Wrap(err, "could not process your request")
 				fmt.Fprintln(stderr, err.Error())

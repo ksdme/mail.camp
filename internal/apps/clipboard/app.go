@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	"github.com/ksdme/mail/internal/apps"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/tui"
@@ -17,18 +18,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 )
-
-type cli struct {
-	Get *struct{} `arg:"subcommand:get" help:"retrieve contents currently on the clipboard"`
-
-	// TODO: Support explicitly passing contents as a positional
-	// argument to this subcommand. This doesn't work at the moment
-	// because something somewhere is breaking down a value with spaces
-	// into separate arguments.
-	Put *struct{} `arg:"subcommand:put" help:"put text on the clipboard"`
-
-	Clear *struct{} `arg:"subcommand:clear" help:"clear the contents on the clipboard"`
-}
 
 type App struct {
 	DB *bun.DB
@@ -56,22 +45,16 @@ func (a *App) Handle(
 	next ssh.Handler,
 	session ssh.Session,
 
-	args []string,
+	args apps.AppArgs,
 	account core.Account,
 
 	interactive bool,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
 ) (int, error) {
-	// Handle cli level behavior.
-	var cli cli
-	if retcode, consumed := utils.ParseArgs(session, "ssh.camp clipboard", args, &cli); consumed {
-		return retcode, nil
-	}
-
 	// Show a tui only if we are in interactive mode and there are no
 	// explicit arguments.
-	if interactive && len(args) == 0 {
+	if interactive && args.Clipboard == nil {
 		defer events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
 		utils.RunTeaInSession(next, session, tui.NewModel(
 			a.DB,
@@ -85,7 +68,7 @@ func (a *App) Handle(
 
 	// Otherwise, process the command.
 	switch {
-	case cli.Put != nil:
+	case args.Clipboard.Put != nil:
 		// Read the value from the connection.
 		value, err := io.ReadAll(session)
 		if err != nil {
@@ -106,7 +89,7 @@ func (a *App) Handle(
 
 		return 0, nil
 
-	case cli.Clear != nil:
+	case args.Clipboard.Clear != nil:
 		err := models.DeleteClipboard(session.Context(), a.DB, account)
 		if err != nil {
 			return 1, errors.Wrap(err, "could not clear the clipboard")

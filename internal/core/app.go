@@ -1,8 +1,9 @@
-package apps
+package core
 
 import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	"github.com/ksdme/mail/internal/apps"
 	"github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 )
@@ -22,7 +23,7 @@ type App interface {
 		next ssh.Handler,
 		session ssh.Session,
 
-		args []string,
+		args apps.AppArgs,
 		account models.Account,
 
 		interactive bool,

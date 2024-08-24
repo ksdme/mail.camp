@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/emersion/go-smtp"
+	"github.com/ksdme/mail/internal/apps"
 	"github.com/ksdme/mail/internal/apps/mail/backend"
 	"github.com/ksdme/mail/internal/apps/mail/events"
 	"github.com/ksdme/mail/internal/apps/mail/models"
@@ -56,7 +57,7 @@ func (m *App) Handle(
 	next ssh.Handler,
 	session ssh.Session,
 
-	args []string,
+	args apps.AppArgs,
 	account core.Account,
 
 	interactive bool,
@@ -67,10 +68,6 @@ func (m *App) Handle(
 	// that the ssh.camp mail is tui only at the moment.
 	// Email at the moment only supports a tui mode.
 	// But, we could show a help message if args has it.
-	var cli struct{}
-	if retcode, consumed := utils.ParseArgs(session, "ssh.camp mail", args, &cli); consumed {
-		return retcode, nil
-	}
 
 	// Otherwise, complain if we are running in an non-interactive mode.
 	if !interactive {
