@@ -9,11 +9,12 @@ Pending
 - Menu
 - Support timeout
 
+Done
+
 #### Clipboard
 
 Pending
 - Clean up value on read
-- Validate the clipboard contents, size
 
 Done
 - Create a package
@@ -27,6 +28,7 @@ Done
 - Non interactive mode
 - Initial application command
 - Consolidate all the cli configuration to top command
+- Validate the clipboard contents, size
 
 #### mail
 

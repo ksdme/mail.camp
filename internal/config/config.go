@@ -34,7 +34,7 @@ type mailSettings struct {
 
 // Settings related to the clipboard app.
 type clipboardSettings struct {
-	MaxContentSize string `env:"CLIPBOARD_MAX_CONTENTS_SIZE" envDefault:"8208"`
+	MaxContentSize int `env:"CLIPBOARD_MAX_CONTENTS_SIZE" envDefault:"2097152"`
 }
 
 func init() {

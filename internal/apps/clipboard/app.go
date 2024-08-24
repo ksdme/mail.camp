@@ -2,6 +2,7 @@ package clipboard
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/tui"
+	"github.com/ksdme/mail/internal/config"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
@@ -69,10 +71,16 @@ func (a *App) Handle(
 	// Otherwise, process the command.
 	switch {
 	case args.Clipboard.Put != nil:
-		// Read the value from the connection.
-		value, err := io.ReadAll(session)
+		r := io.LimitReader(session, int64(config.Clipboard.MaxContentSize)+1)
+		value, err := io.ReadAll(r)
 		if err != nil {
-			return 1, errors.Wrap(err, "could not read contents to put")
+			return 1, errors.Wrap(err, "could not read contents")
+		}
+		if len(value) > config.Clipboard.MaxContentSize {
+			return 1, fmt.Errorf(
+				"clipboard contents exceed the maximum size limit of %d bytes",
+				config.Clipboard.MaxContentSize,
+			)
 		}
 
 		// Save the value.
