@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/config"
+	"github.com/ksdme/mail/internal/core"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 )
@@ -20,7 +21,11 @@ type Model struct {
 	renderer *lipgloss.Renderer
 }
 
-func NewModel(renderer *lipgloss.Renderer, palette colors.ColorPalette) Model {
+func NewModel(
+	apps []core.App,
+	renderer *lipgloss.Renderer,
+	palette colors.ColorPalette,
+) Model {
 	// Make the list take colors from our palette.
 	delegate := list.NewDefaultDelegate()
 	delegate.Styles.DimmedTitle = delegate.Styles.DimmedTitle.
@@ -40,18 +45,13 @@ func NewModel(renderer *lipgloss.Renderer, palette colors.ColorPalette) Model {
 		BorderForeground(palette.Accent).
 		Foreground(palette.Muted)
 
-	items := []list.Item{
-		item{
-			title: "Mail",
-			desc:  "Mail is a disposable email service.",
-		},
-		item{
-			title: "Clipboard",
-			desc:  "Clipboard is a shared clipboard. You can put on the clipboard from one machine and read it from other.",
-		},
+	items := []list.Item{}
+	for _, app := range apps {
+		items = append(items, item{app})
 	}
-	// Make the list look minimal.
 	list := list.New(items, delegate, 0, 0)
+
+	// Make the list look minimal.
 	list.SetShowTitle(false)
 	list.SetShowStatusBar(false)
 	list.SetShowFilter(false)
@@ -59,8 +59,7 @@ func NewModel(renderer *lipgloss.Renderer, palette colors.ColorPalette) Model {
 	list.SetShowHelp(false)
 
 	return Model{
-		list: list,
-
+		list:   list,
 		keymap: DefaultKeyMap(),
 
 		renderer: renderer,
@@ -156,17 +155,20 @@ func DefaultKeyMap() KeyMap {
 }
 
 type item struct {
-	title, desc string
+	app core.App
 }
 
 func (i item) Title() string {
-	return i.title
+	_, title, _ := i.app.Info()
+	return title
 }
 
 func (i item) Description() string {
-	return i.desc
+	_, _, description := i.app.Info()
+	return description
 }
 
 func (i item) FilterValue() string {
-	return i.title
+	_, title, _ := i.app.Info()
+	return title
 }
