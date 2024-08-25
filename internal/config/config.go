@@ -23,13 +23,14 @@ type coreSettings struct {
 
 	MailAppEnabled      bool `env:"MAIL_APP_ENABLED" envDefault:"true"`
 	ClipboardAppEnabled bool `env:"CLIPBOARD_APP_ENABLED" envDefault:"true"`
+
+	Signature string `env:"SIGNATURE"`
 }
 
 // Settings related to the mail app.
 type mailSettings struct {
 	MXHost       string `env:"MX_HOST" envDefault:"localhost"`
 	SMTPBindAddr string `env:"SMTP_BIND_ADDR" envDefault:"127.0.0.1:1025"`
-	Signature    string `env:",expand" envDefault:"${MX_HOST}"`
 }
 
 // Settings related to the clipboard app.

@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ksdme/mail/internal/apps/mail/tui/email"
 	"github.com/ksdme/mail/internal/apps/mail/tui/home"
-	"github.com/ksdme/mail/internal/config"
 	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
@@ -124,20 +123,6 @@ func (m Model) View() string {
 		content = m.email.View()
 	}
 
-	bottom := help.View(m.Help(), m.Renderer, m.Colors)
-	gap := m.width - lipgloss.Width(bottom) - lipgloss.Width(config.Mail.Signature) - 12
-	if gap > 8 {
-		bottom = lipgloss.JoinHorizontal(
-			lipgloss.Left,
-			bottom,
-			m.Renderer.
-				NewStyle().
-				PaddingLeft(gap).
-				Foreground(m.Colors.Muted).
-				Render(config.Mail.Signature),
-		)
-	}
-
 	return m.Renderer.
 		NewStyle().
 		Padding(2, 6).
@@ -145,7 +130,7 @@ func (m Model) View() string {
 			lipgloss.JoinVertical(
 				lipgloss.Top,
 				content,
-				bottom,
+				help.View(m.Help(), m.Renderer, m.Colors),
 			),
 		)
 }
