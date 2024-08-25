@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/ssh"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/config"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 )
@@ -32,14 +32,20 @@ type ClipboardItem struct {
 	Value []byte `bun:",notnull"`
 
 	// TODO: We need to setup cascade relationship.
-	AccountID int64         `bun:",notnull,unique"`
-	Account   *core.Account `bun:"rel:belongs-to,join:account_id=id"`
+	AccountID int64             `bun:",notnull,unique"`
+	Account   *accounts.Account `bun:"rel:belongs-to,join:account_id=id"`
 
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp"`
 }
 
 // Create an encrypted clipboard item from a value.
-func CreateClipboardItem(ctx context.Context, db *bun.DB, value []byte, key ssh.PublicKey, account core.Account) error {
+func CreateClipboardItem(
+	ctx context.Context,
+	db *bun.DB,
+	value []byte,
+	key ssh.PublicKey,
+	account accounts.Account,
+) error {
 	slog.Debug("creating clipboard item", "account", account.ID)
 
 	// TODO: Validate size and existence.
@@ -88,7 +94,12 @@ type DecodedClipboardItem struct {
 }
 
 // Returns a decrypted clipboard item if it exists, otherwise, nil.
-func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, account core.Account) (*DecodedClipboardItem, error) {
+func GetClipboardValue(
+	ctx context.Context,
+	db *bun.DB,
+	key ssh.PublicKey,
+	account accounts.Account,
+) (*DecodedClipboardItem, error) {
 	// Find the item.
 	var item ClipboardItem
 	err := db.
@@ -122,7 +133,7 @@ func GetClipboardValue(ctx context.Context, db *bun.DB, key ssh.PublicKey, accou
 }
 
 // Remove existing clipboard items on this account.
-func DeleteClipboard(ctx context.Context, db *bun.DB, account core.Account) error {
+func DeleteClipboard(ctx context.Context, db *bun.DB, account accounts.Account) error {
 	_, err := db.NewDelete().
 		Model(&ClipboardItem{}).
 		Where("account_id = ?", account.ID).

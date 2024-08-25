@@ -5,7 +5,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps"
-	"github.com/ksdme/mail/internal/core/models"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 )
 
@@ -27,7 +27,7 @@ type App interface {
 		session ssh.Session,
 
 		args apps.AppArgs,
-		account models.Account,
+		account accounts.Account,
 
 		interactive bool,
 		// The configuration that should be used if a tui is being served.
@@ -41,7 +41,7 @@ type App interface {
 	// handling the request, but, instead it should only return a tui interface.
 	HandleApp(
 		session ssh.Session,
-		account models.Account,
+		account accounts.Account,
 
 		renderer *lipgloss.Renderer,
 		palette colors.ColorPalette,

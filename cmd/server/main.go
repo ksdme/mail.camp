@@ -13,13 +13,13 @@ import (
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/ksdme/mail/internal/apps"
+	accountmodels "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard"
 	clipboardmodels "github.com/ksdme/mail/internal/apps/clipboard/models"
 	"github.com/ksdme/mail/internal/apps/mail"
 	mailmodels "github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/core"
-	coremodels "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/menu"
 	"github.com/ksdme/mail/internal/utils"
@@ -46,7 +46,7 @@ func main() {
 	if config.Core.DBMigrate {
 		slog.Info("creating tables")
 		ctx := context.Background()
-		utils.MustExec(db.NewCreateTable().Model(&coremodels.Account{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&accountmodels.Account{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mailbox{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mail{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&clipboardmodels.ClipboardItem{}).Exec(ctx))
@@ -108,7 +108,7 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {
 			return func(s ssh.Session) {
-				account, err := coremodels.GetOrCreateAccountFromPublicKey(
+				account, err := accountmodels.GetOrCreateAccountFromPublicKey(
 					s.Context(),
 					db,
 					s.PublicKey(),
@@ -158,7 +158,7 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 func handleIncoming(enabledApps []core.App) wish.Middleware {
 	return func(next ssh.Handler) ssh.Handler {
 		return func(s ssh.Session) {
-			account := s.Context().Value("account").(coremodels.Account)
+			account := s.Context().Value("account").(accountmodels.Account)
 			stderr := s.Stderr()
 
 			pty, _, active := s.Pty()

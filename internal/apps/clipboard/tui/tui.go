@@ -11,9 +11,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 	"github.com/ksdme/mail/internal/utils"
@@ -28,7 +28,7 @@ type clipboardRealtimeUpdate struct{}
 // clipboard and/or the instructions on how to use it.
 type Model struct {
 	db      *bun.DB
-	account core.Account
+	account accounts.Account
 	key     ssh.PublicKey
 
 	item *models.DecodedClipboardItem
@@ -46,7 +46,7 @@ type Model struct {
 
 func NewModel(
 	db *bun.DB,
-	account core.Account,
+	account accounts.Account,
 	key ssh.PublicKey,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,

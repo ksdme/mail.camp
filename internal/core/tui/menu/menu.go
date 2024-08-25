@@ -6,9 +6,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/core"
-	"github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 )
@@ -18,7 +18,7 @@ type BackToMenuMsg struct{}
 // Represents a menu to select between an application.
 type Model struct {
 	session ssh.Session
-	account models.Account
+	account accounts.Account
 
 	list list.Model
 
@@ -39,7 +39,7 @@ func NewModel(
 	apps []core.App,
 
 	session ssh.Session,
-	account models.Account,
+	account accounts.Account,
 
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,

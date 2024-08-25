@@ -11,11 +11,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/tui"
 	"github.com/ksdme/mail/internal/config"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
 	"github.com/pkg/errors"
@@ -49,7 +49,7 @@ func (a *App) HandleRequest(
 	session ssh.Session,
 
 	args apps.AppArgs,
-	account core.Account,
+	account accounts.Account,
 
 	interactive bool,
 	renderer *lipgloss.Renderer,
@@ -133,7 +133,7 @@ func (a *App) HandleRequest(
 
 func (a *App) HandleApp(
 	session ssh.Session,
-	account core.Account,
+	account accounts.Account,
 
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
@@ -154,7 +154,7 @@ func (a *App) HandleApp(
 	return model, cleanup
 }
 
-func (a *App) cleanUpSession(account core.Account) {
+func (a *App) cleanUpSession(account accounts.Account) {
 	events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
 }
 

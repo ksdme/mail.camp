@@ -10,10 +10,10 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/mail/events"
 	"github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/apps/mail/tui/email"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/picker"
 	"github.com/ksdme/mail/internal/core/tui/components/table"
@@ -44,7 +44,7 @@ type mailsRefreshedMsg struct {
 
 type Model struct {
 	db      *bun.DB
-	account core.Account
+	account accounts.Account
 
 	mailboxes picker.Model
 	mailbox   *mailboxWithUnread

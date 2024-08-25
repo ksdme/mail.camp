@@ -4,9 +4,9 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/mail/tui/email"
 	"github.com/ksdme/mail/internal/apps/mail/tui/home"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 	"github.com/uptrace/bun"
@@ -22,7 +22,7 @@ const (
 // Represents the top most model.
 type Model struct {
 	db      *bun.DB
-	account core.Account
+	account accounts.Account
 
 	mode  mode
 	home  home.Model
@@ -41,7 +41,7 @@ type Model struct {
 
 func NewModel(
 	db *bun.DB,
-	account core.Account,
+	account accounts.Account,
 	renderer *lipgloss.Renderer,
 	colors colors.ColorPalette,
 	quit tea.Cmd,

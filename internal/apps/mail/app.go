@@ -11,12 +11,12 @@ import (
 	"github.com/charmbracelet/ssh"
 	"github.com/emersion/go-smtp"
 	"github.com/ksdme/mail/internal/apps"
+	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/mail/backend"
 	"github.com/ksdme/mail/internal/apps/mail/events"
 	"github.com/ksdme/mail/internal/apps/mail/models"
 	"github.com/ksdme/mail/internal/apps/mail/tui"
 	"github.com/ksdme/mail/internal/config"
-	core "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/utils"
 	"github.com/uptrace/bun"
@@ -59,7 +59,7 @@ func (m *App) HandleRequest(
 	session ssh.Session,
 
 	args apps.AppArgs,
-	account core.Account,
+	account accounts.Account,
 
 	interactive bool,
 	renderer *lipgloss.Renderer,
@@ -88,7 +88,7 @@ func (m *App) HandleRequest(
 
 func (a *App) HandleApp(
 	session ssh.Session,
-	account core.Account,
+	account accounts.Account,
 
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
@@ -108,7 +108,7 @@ func (a *App) HandleApp(
 	return model, cleanup
 }
 
-func (a *App) cleanUpSession(account core.Account) {
+func (a *App) cleanUpSession(account accounts.Account) {
 	events.MailboxContentsUpdatedSignal.CleanUp(account.ID)
 }
 
