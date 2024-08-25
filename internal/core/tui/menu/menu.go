@@ -5,24 +5,42 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/config"
 	"github.com/ksdme/mail/internal/core"
+	"github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
 	"github.com/ksdme/mail/internal/core/tui/components/help"
 )
 
+type BackToMenuMsg struct{}
+
 // Represents a menu to select between an application.
 type Model struct {
+	session ssh.Session
+	account models.Account
+
 	list list.Model
 
-	keymap KeyMap
+	model   tea.Model // The selected app model.
+	cleanup func()    // The clean up method to run when offloading app.
 
+	width  int
+	height int
+
+	keymap   KeyMap
 	palette  colors.ColorPalette
 	renderer *lipgloss.Renderer
+
+	quitting bool
 }
 
 func NewModel(
 	apps []core.App,
+
+	session ssh.Session,
+	account models.Account,
+
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
 ) Model {
@@ -59,6 +77,9 @@ func NewModel(
 	list.SetShowHelp(false)
 
 	return Model{
+		session: session,
+		account: account,
+
 		list:   list,
 		keymap: DefaultKeyMap(),
 
@@ -72,23 +93,87 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "q":
-			return m, tea.Quit
+		switch {
+		case key.Matches(msg, m.keymap.Quit):
+			if m.model == nil {
+				if m.cleanup != nil {
+					m.cleanup()
+				}
+
+				m.quitting = true
+				return m, tea.Quit
+			}
+
+		case key.Matches(msg, m.keymap.Select):
+			if m.model == nil {
+				item, _ := m.list.SelectedItem().(item)
+
+				if m.cleanup != nil {
+					m.cleanup()
+				}
+
+				m.model, m.cleanup = item.app.HandleApp(
+					m.session,
+					m.account,
+					m.renderer,
+					m.palette,
+					func() tea.Msg {
+						return BackToMenuMsg{}
+					},
+				)
+
+				return m, tea.Batch(
+					m.model.Init(),
+					func() tea.Msg {
+						return tea.WindowSizeMsg{
+							Width:  m.width,
+							Height: m.height,
+						}
+					},
+				)
+			}
 		}
 
 	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+
 		m.list.SetSize(msg.Width-8, msg.Height-7)
+		if m.model != nil {
+			m.model, _ = m.model.Update(msg)
+		}
+
+	case BackToMenuMsg:
+		m.model = nil
+		if m.cleanup != nil {
+			m.cleanup()
+		}
+
+		return m, nil
 	}
 
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	if m.model == nil {
+		m.list, cmd = m.list.Update(msg)
+	} else {
+		m.model, cmd = m.model.Update(msg)
+	}
 	return m, cmd
 }
 
 func (m Model) View() string {
+	if m.quitting {
+		return ""
+	}
+
+	if m.model != nil {
+		return m.model.View()
+	}
+
+	// Render the menu.
 	width := m.list.Width()
 
 	title := m.renderer.

@@ -21,6 +21,7 @@ import (
 	"github.com/ksdme/mail/internal/core"
 	coremodels "github.com/ksdme/mail/internal/core/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
+	"github.com/ksdme/mail/internal/core/tui/menu"
 	"github.com/ksdme/mail/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -157,6 +158,7 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 func handleIncoming(enabledApps []core.App) wish.Middleware {
 	return func(next ssh.Handler) ssh.Handler {
 		return func(s ssh.Session) {
+			account := s.Context().Value("account").(coremodels.Account)
 			stderr := s.Stderr()
 
 			pty, _, active := s.Pty()
@@ -177,8 +179,17 @@ func handleIncoming(enabledApps []core.App) wish.Middleware {
 			// Show a menu if no app was explicitly requested.
 			command := s.Command()
 			if len(command) == 0 {
-				fmt.Fprintln(stderr, "todo: implement menu tui")
-				s.Exit(1)
+				utils.RunTeaInSession(
+					next,
+					s,
+					menu.NewModel(
+						enabledApps,
+						s,
+						account,
+						renderer,
+						palette,
+					),
+				)
 				return
 			}
 
@@ -221,8 +232,7 @@ func handleIncoming(enabledApps []core.App) wish.Middleware {
 				return
 			}
 
-			account := s.Context().Value("account").(coremodels.Account)
-			if retcode, err := app.Handle(next, s, args, account, active, renderer, palette); err != nil {
+			if retcode, err := app.HandleRequest(next, s, args, account, active, renderer, palette); err != nil {
 				slog.Error("could not process the request", "app", "n", "account", account.ID, "err", err, "args", command)
 
 				err = errors.Wrap(err, "could not process your request")

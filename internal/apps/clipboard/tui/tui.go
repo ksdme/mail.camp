@@ -40,6 +40,7 @@ type Model struct {
 	palette  colors.ColorPalette
 	keymap   KeyMap
 
+	quit     tea.Cmd
 	quitting bool
 }
 
@@ -49,6 +50,7 @@ func NewModel(
 	key ssh.PublicKey,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
+	quit tea.Cmd,
 ) Model {
 	return Model{
 		db:      db,
@@ -60,6 +62,8 @@ func NewModel(
 		renderer: renderer,
 		palette:  palette,
 		keymap:   DefaultKeyMap(),
+
+		quit: quit,
 	}
 }
 
@@ -80,7 +84,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.keymap.Quit):
-			return m, tea.Quit
+			return m, m.quit
 
 		case key.Matches(msg, m.keymap.Clear):
 			return m, m.clearClipboard

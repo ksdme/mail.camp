@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/emersion/go-smtp"
@@ -53,7 +54,7 @@ func (m *App) Init() {
 	}()
 }
 
-func (m *App) Handle(
+func (m *App) HandleRequest(
 	next ssh.Handler,
 	session ssh.Session,
 
@@ -76,13 +77,39 @@ func (m *App) Handle(
 	}
 
 	// And, then, run the tea application.
-	defer events.MailboxContentsUpdatedSignal.CleanUp(account.ID)
+	defer m.cleanUpSession(account)
 	utils.RunTeaInSession(
 		next,
 		session,
-		tui.NewModel(m.DB, account, renderer, palette),
+		tui.NewModel(m.DB, account, renderer, palette, tea.Quit),
 	)
 	return 0, nil
+}
+
+func (a *App) HandleApp(
+	session ssh.Session,
+	account core.Account,
+
+	renderer *lipgloss.Renderer,
+	palette colors.ColorPalette,
+
+	quit tea.Cmd,
+) (tea.Model, func()) {
+	model := tui.NewModel(
+		a.DB,
+		account,
+		renderer,
+		palette,
+		quit,
+	)
+	cleanup := func() {
+		a.cleanUpSession(account)
+	}
+	return model, cleanup
+}
+
+func (a *App) cleanUpSession(account core.Account) {
+	events.MailboxContentsUpdatedSignal.CleanUp(account.ID)
 }
 
 func (m *App) CleanUp() {

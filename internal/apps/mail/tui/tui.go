@@ -35,6 +35,7 @@ type Model struct {
 	Colors   colors.ColorPalette
 	Renderer *lipgloss.Renderer
 
+	quit     tea.Cmd
 	quitting bool
 }
 
@@ -43,6 +44,7 @@ func NewModel(
 	account core.Account,
 	renderer *lipgloss.Renderer,
 	colors colors.ColorPalette,
+	quit tea.Cmd,
 ) Model {
 	return Model{
 		db:      db,
@@ -55,6 +57,8 @@ func NewModel(
 		KeyMap:   DefaultKeyMap(),
 		Renderer: renderer,
 		Colors:   colors,
+
+		quit: quit,
 	}
 }
 
@@ -87,11 +91,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, m.KeyMap.Quit):
 			m.quitting = true
-			return m, tea.Quit
+			return m, m.quit
 		}
 
 	case home.MailboxRealTimeUpdate:
 		m.home, cmd = m.home.Update(msg)
+		return m, cmd
+
+	case email.MailSelectedMsg:
+		m.mode = Email
+		m.email, cmd = m.email.Update(msg)
 		return m, cmd
 
 	case email.MailDismissMsg:

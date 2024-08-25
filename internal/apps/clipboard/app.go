@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps"
@@ -43,7 +44,7 @@ func (a *App) Init() {
 }
 
 // Handle the incoming connection.
-func (a *App) Handle(
+func (a *App) HandleRequest(
 	next ssh.Handler,
 	session ssh.Session,
 
@@ -58,13 +59,14 @@ func (a *App) Handle(
 	// explicit arguments.
 	if interactive {
 		if args.Clipboard.Put == nil && args.Clipboard.Clear == nil {
-			defer events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
+			defer a.cleanUpSession(account)
 			utils.RunTeaInSession(next, session, tui.NewModel(
 				a.DB,
 				account,
 				session.PublicKey(),
 				renderer,
 				palette,
+				tea.Quit,
 			))
 			return 0, nil
 		}
@@ -127,6 +129,33 @@ func (a *App) Handle(
 
 		return 0, nil
 	}
+}
+
+func (a *App) HandleApp(
+	session ssh.Session,
+	account core.Account,
+
+	renderer *lipgloss.Renderer,
+	palette colors.ColorPalette,
+
+	quit tea.Cmd,
+) (tea.Model, func()) {
+	model := tui.NewModel(
+		a.DB,
+		account,
+		session.PublicKey(),
+		renderer,
+		palette,
+		quit,
+	)
+	cleanup := func() {
+		a.cleanUpSession(account)
+	}
+	return model, cleanup
+}
+
+func (a *App) cleanUpSession(account core.Account) {
+	events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
 }
 
 func (a *App) CleanUp() {

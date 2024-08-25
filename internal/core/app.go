@@ -1,6 +1,7 @@
 package core
 
 import (
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/ssh"
 	"github.com/ksdme/mail/internal/apps"
@@ -16,10 +17,12 @@ type App interface {
 	// application. You can initialize your workers here.
 	Init()
 
-	// Handle should handle the incoming request to this application.
-	// The application can decide to present a tui interface or a non tui interface.
+	// An App can be booted up in two ways. The client can directly request
+	// the services of a specific app using a sub command. When that happens,
+	// this Handle method is invoked. It can then decide on presenting a tui
+	// or a non-tui interface.
 	// TODO: Structure the args and resources better.
-	Handle(
+	HandleRequest(
 		next ssh.Handler,
 		session ssh.Session,
 
@@ -27,9 +30,24 @@ type App interface {
 		account models.Account,
 
 		interactive bool,
+		// The configuration that should be used if a tui is being served.
+		// TODO: Figure out a better way to pass this.
 		renderer *lipgloss.Renderer,
 		palette colors.ColorPalette,
 	) (int, error)
+
+	// The other mode is when the application is selected from an interactive
+	// application menu. When that happens, the application is not in charge of
+	// handling the request, but, instead it should only return a tui interface.
+	HandleApp(
+		session ssh.Session,
+		account models.Account,
+
+		renderer *lipgloss.Renderer,
+		palette colors.ColorPalette,
+
+		quit tea.Cmd,
+	) (tea.Model, func())
 
 	// Called to close and cleanup the application during shutdown.
 	CleanUp()
