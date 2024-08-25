@@ -56,16 +56,21 @@ func (a *App) Handle(
 ) (int, error) {
 	// Show a tui only if we are in interactive mode and there are no
 	// explicit arguments.
-	if interactive && args.Clipboard == nil {
-		defer events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
-		utils.RunTeaInSession(next, session, tui.NewModel(
-			a.DB,
-			account,
-			session.PublicKey(),
-			renderer,
-			palette,
-		))
-		return 0, nil
+	if interactive {
+		if args.Clipboard.Put == nil && args.Clipboard.Clear == nil {
+			defer events.ClipboardContentsUpdatedSignal.CleanUp(account.ID)
+			utils.RunTeaInSession(next, session, tui.NewModel(
+				a.DB,
+				account,
+				session.PublicKey(),
+				renderer,
+				palette,
+			))
+			return 0, nil
+		}
+
+		// TODO: Recommend a solution.
+		return 1, fmt.Errorf("command not supported in interactive mode")
 	}
 
 	// Otherwise, process the command.
