@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"strings"
 	"time"
 
@@ -33,6 +34,78 @@ type Key struct {
 	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp"`
 }
 
+// A weak Base64 validation pattern.
+var fingerprintValuePattern = regexp.MustCompile(`^[a-zA-Z0-9\+\/\=]+$`)
+
+// Add a key to the account.
+func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint string) error {
+	// Validate the key.
+	// TODO: Validate that they are just letters, numbers and plus, equals
+	// TODO: Improve these error messages.
+	partials := strings.Split(fingerprint, ":")
+	if len(partials) != 2 {
+		return fmt.Errorf("bad fingerprint")
+	}
+	// Eh, the only reason we prevent other algorithms is because in go-land,
+	// we can only generate SHA256 fingerprints of incoming public keys.
+	if partials[0] != "SHA256" {
+		return fmt.Errorf("bad fingerprint: unsupported hash algorithm, use SHA256")
+	}
+	if !fingerprintValuePattern.MatchString(partials[1]) {
+		return fmt.Errorf("bad fingerprint: unknown encoding, use Base64 encoded SHA256")
+	}
+
+	err := db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+		key := Key{}
+
+		// Check if the key is taken.
+		err := tx.NewSelect().Model(&key).Where("fingerprint = ?", fingerprint).Scan(ctx)
+		if err == nil {
+			if key.AccountID == account.ID {
+				return fmt.Errorf("this key was already added to your account")
+			}
+			return errors.Wrap(err, "this key is already added on another account")
+		}
+		if err != sql.ErrNoRows {
+			return errors.Wrap(err, "could not query keys")
+		}
+
+		// Add the key otherwise.
+		key = Key{Fingerprint: fingerprint, AccountID: account.ID}
+		if _, err := db.NewInsert().Model(&key).Exec(ctx); err != nil {
+			return errors.Wrap(err, "could not create key")
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Remove a key from a specific account.
+func (a *Account) DeleteKey(
+	ctx context.Context,
+	db *bun.DB,
+	fingerprint string,
+) error {
+	slog.Info("deleting account key", "account", a.ID, "fingerprint", fingerprint)
+
+	_, err := db.
+		NewDelete().
+		Model(&Key{}).
+		Where("account_id = ?", a.ID).
+		Where("fingerprint = ?", fingerprint).
+		Exec(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not delete key")
+	}
+
+	return nil
+}
+
 // Retrieve or create an account.
 func GetOrCreateAccountFromPublicKey(
 	ctx context.Context,
@@ -40,7 +113,6 @@ func GetOrCreateAccountFromPublicKey(
 	key ssh.PublicKey,
 ) (*Account, error) {
 	fingerprint := ssh.FingerprintSHA256(key)
-	fingerprint = normalize(fingerprint)
 
 	// Find existing account.
 	var account Account
@@ -79,33 +151,4 @@ func GetOrCreateAccountFromPublicKey(
 	}
 
 	return &account, nil
-}
-
-// Remove a key from a specific account.
-func DeleteKey(
-	ctx context.Context,
-	db *bun.DB,
-	account Account,
-	fingerprint string,
-) error {
-	fingerprint = normalize(fingerprint)
-	slog.Info("deleting account key", "account", account.ID, "fingerprint", fingerprint)
-
-	_, err := db.
-		NewDelete().
-		Model(&Key{}).
-		Where("account_id = ?", account.ID).
-		Where("fingerprint = ?", fingerprint).
-		Exec(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not delete key")
-	}
-
-	return nil
-}
-
-func normalize(fingerprint string) string {
-	// While the display format of ssh-keygen has both lowercase and uppercase
-	// characters, the hash is case insensitive.
-	return strings.ToLower(fingerprint)
 }
