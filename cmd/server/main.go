@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/ssh"
@@ -114,15 +115,37 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {
 			return func(s ssh.Session) {
-				account, err := accountmodels.GetOrCreateAccountFromPublicKey(
-					s.Context(),
-					db,
-					s.PublicKey(),
-				)
+				key := s.PublicKey()
+
+				account, err := accountmodels.GetAccount(s.Context(), db, key)
 				if err != nil {
 					fmt.Fprintln(s, err.Error())
 					s.Exit(1)
 					return
+				}
+
+				if account == nil {
+					fmt.Fprintf(
+						s,
+						"You do not have an account on ssh.camp.\nWould you like to create one? (yes/no) ",
+					)
+
+					var consent string
+					fmt.Fscanf(s, "%s", &consent)
+					consent = strings.ToLower(consent)
+					consent = strings.TrimSpace(consent)
+					if consent != "yes" {
+						fmt.Fprintln(s, "not creating account, have a good day :)")
+						s.Exit(1)
+						return
+					}
+
+					account, err = accountmodels.CreateAccount(s.Context(), db, key)
+					if err != nil {
+						fmt.Fprintln(s, errors.Wrap(err, "could not create account").Error())
+						s.Exit(1)
+						return
+					}
 				}
 
 				s.Context().SetValue("account", *account)

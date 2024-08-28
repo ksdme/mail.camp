@@ -146,15 +146,15 @@ func (a *Account) ListKeys(ctx context.Context, db *bun.DB) ([]Key, error) {
 	return keys, nil
 }
 
-// Retrieve or create an account.
-func GetOrCreateAccountFromPublicKey(
+// Find existing account.
+func GetAccount(
 	ctx context.Context,
 	db *bun.DB,
 	key ssh.PublicKey,
 ) (*Account, error) {
 	fingerprint := ssh.FingerprintSHA256(key)
+	fingerprint = normalize(fingerprint)
 
-	// Find existing account.
 	var account Account
 	err := db.
 		NewSelect().
@@ -163,15 +163,28 @@ func GetOrCreateAccountFromPublicKey(
 		JoinOn("key.account_id = account.id").
 		Where("key.fingerprint = ?", fingerprint).
 		Scan(ctx)
-	if err == nil {
-		return &account, nil
-	} else if err != sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err, "could not query accounts")
 	}
 
+	return &account, nil
+}
+
+// Create an account.
+func CreateAccount(
+	ctx context.Context,
+	db *bun.DB,
+	key ssh.PublicKey,
+) (*Account, error) {
+	fingerprint := ssh.FingerprintSHA256(key)
+	fingerprint = normalize(fingerprint)
+
 	// Create an account if one doesn't exist.
-	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		account = Account{}
+	var account Account
+	err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
 			return errors.Wrap(err, "could not create account")
 		}

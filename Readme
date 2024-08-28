@@ -20,8 +20,6 @@ Pending
 - Add read-only TUI
 - Add TUI
 - Support deleting account
-- Prevent creating account with adding a fingerprint
-- Do not magically create accounts, ask first
 - Rename command to account
 
 Done
@@ -29,6 +27,8 @@ Done
 - Integrate with the login system
 - Prevent deleting last key
 - Complain if deleting missing key
+- Prevent creating account with adding a fingerprint
+- Do not magically create accounts, ask first
 
 #### Clipboard
 
