@@ -43,16 +43,52 @@ func main() {
 	}
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 
+	// We need this to enable ON DELETE CASCADE constraints.
+	_, err = db.NewRaw("PRAGMA foreign_keys = ON").Exec(context.Background())
+	if err != nil {
+		log.Panicf("could not enabled foreign_keys: %v", err)
+	}
+
 	// Create the database tables if needed.
 	// TODO: Have an actual migration system.
 	if config.Core.DBMigrate {
 		slog.Info("creating tables")
 		ctx := context.Background()
-		utils.MustExec(db.NewCreateTable().Model(&accountmodels.Account{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&accountmodels.Key{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mailbox{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mail{}).Exec(ctx))
-		utils.MustExec(db.NewCreateTable().Model(&clipboardmodels.ClipboardItem{}).Exec(ctx))
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&accountmodels.Account{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&accountmodels.Key{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&mailmodels.Mailbox{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&mailmodels.Mail{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&clipboardmodels.ClipboardItem{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
 	}
 
 	apps := []core.App{

@@ -41,7 +41,7 @@ type Mailbox struct {
 
 	// TODO: We need to setup cascade relationship.
 	AccountID int64             `bun:",notnull"`
-	Account   *accounts.Account `bun:"rel:belongs-to,join:account_id=id"`
+	Account   *accounts.Account `bun:"rel:belongs-to,join:account_id=id,on_delete:cascade"`
 }
 
 func (m Mailbox) Email() string {
