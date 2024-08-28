@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"time"
+	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -85,8 +86,13 @@ func (a *App) HandleRequest(
 		}
 		if len(value) > config.Clipboard.MaxContentSize {
 			return 1, fmt.Errorf(
-				"clipboard contents exceed the maximum size limit of %d bytes",
+				"could not put on the clipboard: contents exceed the max size limit of %d bytes",
 				config.Clipboard.MaxContentSize,
+			)
+		}
+		if !utf8.Valid(value) {
+			return 1, fmt.Errorf(
+				"could not put on the clipboard: contents are not a text string",
 			)
 		}
 
@@ -99,7 +105,7 @@ func (a *App) HandleRequest(
 			account,
 		)
 		if err != nil {
-			return 1, errors.Wrap(err, "could not put to the clipboard")
+			return 1, errors.Wrap(err, "could not put on the clipboard")
 		}
 
 		return 0, nil
