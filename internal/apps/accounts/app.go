@@ -11,6 +11,7 @@ import (
 	"github.com/ksdme/mail/internal/apps"
 	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/core/tui/colors"
+	"github.com/ksdme/mail/internal/utils"
 	"github.com/pkg/errors"
 	"github.com/uptrace/bun"
 )
@@ -70,6 +71,21 @@ func (a *App) HandleRequest(
 
 		fmt.Fprintln(session, strings.Join(lines, "\n"))
 		return 0, nil
+
+	case args.Accounts.DeleteAccount != nil:
+		delete := utils.AskConsent(
+			session,
+			"This operation will delete your account on ssh.camp.\n"+
+				"Are you sure? (yes/no) ",
+		)
+		if !delete {
+			return 1, fmt.Errorf("aborting account deletion operation")
+		}
+
+		err := account.Delete(session.Context(), a.DB)
+		if err != nil {
+			return 1, errors.Wrap(err, "could not delete account")
+		}
 
 	default:
 		return 1, fmt.Errorf("unknown operation")

@@ -7,7 +7,6 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/ssh"
@@ -161,16 +160,12 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 				}
 
 				if account == nil {
-					fmt.Fprintf(
+					create := utils.AskConsent(
 						s,
-						"You do not have an account on ssh.camp.\nWould you like to create one? (yes/no) ",
+						"You do not have an account on ssh.camp.\n"+
+							"Would you like to create one? (yes/no) ",
 					)
-
-					var consent string
-					fmt.Fscanf(s, "%s", &consent)
-					consent = strings.ToLower(consent)
-					consent = strings.TrimSpace(consent)
-					if consent != "yes" {
+					if !create {
 						fmt.Fprintln(s, "not creating account, have a good day :)")
 						s.Exit(1)
 						return

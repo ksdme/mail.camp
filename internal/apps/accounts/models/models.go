@@ -146,6 +146,21 @@ func (a *Account) ListKeys(ctx context.Context, db *bun.DB) ([]Key, error) {
 	return keys, nil
 }
 
+// Delete the account and all the associated resources.
+func (a *Account) Delete(ctx context.Context, db *bun.DB) error {
+	// Other related resources share a cascading delete relationship
+	// with the account. So, they should be automatically cleaned up.
+	_, err := db.
+		NewDelete().
+		Model(&Account{}).
+		Where("id = ?", a.ID).
+		Exec(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not delete account")
+	}
+	return nil
+}
+
 // Find existing account.
 func GetAccount(
 	ctx context.Context,
