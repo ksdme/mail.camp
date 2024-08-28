@@ -3,8 +3,6 @@
 #### Core
 
 Pending
-- Alias keys
-- Temporary login
 - Support timeout
 - Remove references to ssh.camp host
 - Update app descriptions
@@ -12,6 +10,25 @@ Pending
 Done
 - Menu
 - Help
+
+#### Accounts
+
+Pending
+- Alias keys
+- Temporary login
+- Clipboard cannot use the PublicKey for encrypting anymore
+- Add read-only TUI
+- Add TUI
+- Support deleting account
+- Prevent creating account with adding a fingerprint
+- Do not magically create accounts, ask first
+- Rename command to account
+
+Done
+- Add CLI interface
+- Integrate with the login system
+- Prevent deleting last key
+- Complain if deleting missing key
 
 #### Clipboard
 

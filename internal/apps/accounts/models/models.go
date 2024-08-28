@@ -39,6 +39,8 @@ var fingerprintValuePattern = regexp.MustCompile(`^[a-zA-Z0-9\+\/\=]+$`)
 
 // Add a key to the account.
 func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint string) error {
+	fingerprint = normalize(fingerprint)
+
 	// Validate the key.
 	partials := strings.Split(fingerprint, ":")
 	if len(partials) != 2 {
@@ -89,20 +91,42 @@ func (a *Account) RemoveKey(
 	db *bun.DB,
 	fingerprint string,
 ) error {
-	slog.Info("deleting account key", "account", a.ID, "fingerprint", fingerprint)
+	fingerprint = normalize(fingerprint)
+	slog.Info("deleting key", "account", a.ID, "fingerprint", fingerprint)
 
-	// TODO: Prevent deleting if there are no keys on the account.
-	_, err := db.
-		NewDelete().
-		Model(&Key{}).
-		Where("account_id = ?", a.ID).
-		Where("fingerprint = ?", fingerprint).
-		Exec(ctx)
-	if err != nil {
-		return errors.Wrap(err, "could not delete key")
-	}
+	// Delete the key if possible.
+	return db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		result, err := tx.
+			NewDelete().
+			Model(&Key{}).
+			Where("account_id = ?", a.ID).
+			Where("fingerprint = ?", fingerprint).
+			Exec(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not query")
+		}
+		if count, err := result.RowsAffected(); err != nil {
+			return errors.Wrap(err, "could not query")
+		} else {
+			if count == 0 {
+				return fmt.Errorf("key not found")
+			}
+		}
 
-	return nil
+		count, err := tx.
+			NewSelect().
+			Model(&Key{}).
+			Where("account_id = ?", a.ID).
+			Count(ctx)
+		if err != nil {
+			return errors.Wrap(err, "could not query keys")
+		}
+		if count == 0 {
+			return fmt.Errorf("this will leave your account without any keys")
+		}
+
+		return nil
+	})
 }
 
 // List all the keys added on this account.
@@ -168,4 +192,8 @@ func GetOrCreateAccountFromPublicKey(
 	}
 
 	return &account, nil
+}
+
+func normalize(fingerprint string) string {
+	return strings.TrimSpace(fingerprint)
 }
