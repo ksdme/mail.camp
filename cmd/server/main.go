@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/bubbletea"
 	"github.com/ksdme/mail/internal/apps"
+	"github.com/ksdme/mail/internal/apps/accounts"
 	accountmodels "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard"
 	clipboardmodels "github.com/ksdme/mail/internal/apps/clipboard/models"
@@ -47,12 +48,17 @@ func main() {
 		slog.Info("creating tables")
 		ctx := context.Background()
 		utils.MustExec(db.NewCreateTable().Model(&accountmodels.Account{}).Exec(ctx))
+		utils.MustExec(db.NewCreateTable().Model(&accountmodels.Key{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mailbox{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&mailmodels.Mail{}).Exec(ctx))
 		utils.MustExec(db.NewCreateTable().Model(&clipboardmodels.ClipboardItem{}).Exec(ctx))
 	}
 
-	apps := []core.App{}
+	apps := []core.App{
+		&accounts.App{
+			DB: db,
+		},
+	}
 	if config.Core.MailAppEnabled {
 		apps = append(apps, &mail.App{
 			DB: db,
@@ -208,6 +214,9 @@ func handleIncoming(enabledApps []core.App) wish.Middleware {
 
 			case args.Clipboard != nil:
 				name = "clipboard"
+
+			case args.Accounts != nil:
+				name = "accounts"
 			}
 
 			// Figure out which app needs to be run.

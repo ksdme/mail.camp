@@ -18,4 +18,17 @@ type AppArgs struct {
 
 		Clear *struct{} `arg:"subcommand:clear" help:"clear the contents on the clipboard"`
 	} `arg:"subcommand:clipboard" help:"a clipboard app"`
+
+	// Accounts application.
+	Accounts *struct {
+		AddKey *struct {
+			Key string `arg:"positional,required" help:"SHA256 fingerprint of the key to add"`
+		} `arg:"subcommand:add-key" help:"add a key to your account"`
+
+		RemoveKey *struct {
+			Key string `arg:"positional,required" help:"SHA256 fingerprint of the key to remove"`
+		} `arg:"subcommand:remove-key" help:"add a key to your account"`
+
+		ListKeys *struct{} `arg:"subcommand:list-keys" help:"list all keys attached to the account"`
+	} `arg:"subcommand:accounts" help:"manage your account"`
 }
