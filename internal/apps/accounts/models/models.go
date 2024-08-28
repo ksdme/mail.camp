@@ -40,11 +40,9 @@ var fingerprintValuePattern = regexp.MustCompile(`^[a-zA-Z0-9\+\/\=]+$`)
 // Add a key to the account.
 func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint string) error {
 	// Validate the key.
-	// TODO: Validate that they are just letters, numbers and plus, equals
-	// TODO: Improve these error messages.
 	partials := strings.Split(fingerprint, ":")
 	if len(partials) != 2 {
-		return fmt.Errorf("bad fingerprint")
+		return fmt.Errorf("bad fingerprint: use Base64 encoded SHA256")
 	}
 	// Eh, the only reason we prevent other algorithms is because in go-land,
 	// we can only generate SHA256 fingerprints of incoming public keys.
@@ -55,7 +53,7 @@ func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint stri
 		return fmt.Errorf("bad fingerprint: unknown encoding, use Base64 encoded SHA256")
 	}
 
-	err := db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+	err := db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		key := Key{}
 
 		// Check if the key is taken.
@@ -64,7 +62,7 @@ func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint stri
 			if key.AccountID == account.ID {
 				return fmt.Errorf("this key was already added to your account")
 			}
-			return errors.Wrap(err, "this key is already added on another account")
+			return errors.Wrap(err, "this key is already attached to another account")
 		}
 		if err != sql.ErrNoRows {
 			return errors.Wrap(err, "could not query keys")
@@ -72,7 +70,7 @@ func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint stri
 
 		// Add the key otherwise.
 		key = Key{Fingerprint: fingerprint, AccountID: account.ID}
-		if _, err := db.NewInsert().Model(&key).Exec(ctx); err != nil {
+		if _, err := tx.NewInsert().Model(&key).Exec(ctx); err != nil {
 			return errors.Wrap(err, "could not create key")
 		}
 
@@ -86,13 +84,14 @@ func (account *Account) AddKey(ctx context.Context, db *bun.DB, fingerprint stri
 }
 
 // Remove a key from a specific account.
-func (a *Account) DeleteKey(
+func (a *Account) RemoveKey(
 	ctx context.Context,
 	db *bun.DB,
 	fingerprint string,
 ) error {
 	slog.Info("deleting account key", "account", a.ID, "fingerprint", fingerprint)
 
+	// TODO: Prevent deleting if there are no keys on the account.
 	_, err := db.
 		NewDelete().
 		Model(&Key{}).
@@ -104,6 +103,23 @@ func (a *Account) DeleteKey(
 	}
 
 	return nil
+}
+
+// List all the keys added on this account.
+func (a *Account) ListKeys(ctx context.Context, db *bun.DB) ([]Key, error) {
+	var keys []Key
+
+	err := db.
+		NewSelect().
+		Model(&keys).
+		Where("account_id = ?", a.ID).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not query keys")
+	}
+
+	return keys, nil
 }
 
 // Retrieve or create an account.
@@ -130,12 +146,13 @@ func GetOrCreateAccountFromPublicKey(
 	}
 
 	// Create an account if one doesn't exist.
-	err = db.RunInTx(ctx, &sql.TxOptions{}, func(ctx context.Context, tx bun.Tx) error {
+	err = db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 		account = Account{}
 		if _, err := tx.NewInsert().Model(&account).Exec(ctx); err != nil {
 			return errors.Wrap(err, "could not create account")
 		}
 
+		// TODO: This should just use account.AddKey.
 		login := Key{Fingerprint: fingerprint, AccountID: account.ID}
 		if _, err := tx.NewInsert().Model(&login).Exec(ctx); err != nil {
 			if utils.IsUniqueConstraintErr(err) {
