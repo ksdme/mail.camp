@@ -14,12 +14,10 @@ Done
 #### Accounts
 
 Pending
-- Alias keys
 - Temporary login
 - Clipboard cannot use the PublicKey for encrypting anymore
 - Add read-only TUI
 - Add TUI
-- Support deleting account
 - Rename command to account
 
 Done
@@ -29,6 +27,7 @@ Done
 - Complain if deleting missing key
 - Prevent creating account with adding a fingerprint
 - Do not magically create accounts, ask first
+- Support deleting account
 
 #### Clipboard
 
