@@ -29,7 +29,9 @@ type App struct {
 }
 
 func (m *App) Info() (string, string, string) {
-	return "mail", "Mail", "Mail"
+	description := "You can use it for things like registering on websites that " +
+		"don't respect\nyour mailbox, or, to receive emails from your development server."
+	return "mail", "Disposable Mailboxes", description
 }
 
 func (m *App) Init() {

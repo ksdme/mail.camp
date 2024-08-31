@@ -98,11 +98,7 @@ func main() {
 		)
 	}
 
-	apps := []core.App{
-		&accounts.App{
-			DB: db,
-		},
-	}
+	apps := []core.App{}
 	if config.Core.MailAppEnabled {
 		apps = append(apps, &mail.App{
 			DB: db,
@@ -113,9 +109,9 @@ func main() {
 			DB: db,
 		})
 	}
-	if len(apps) == 0 {
-		log.Panicf("no app is enabled")
-	}
+	apps = append(apps, &accounts.App{
+		DB: db,
+	})
 
 	for _, app := range apps {
 		name, _, _ := app.Info()

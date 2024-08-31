@@ -46,6 +46,7 @@ func NewModel(
 ) Model {
 	// Make the list take colors from our palette.
 	delegate := list.NewDefaultDelegate()
+	delegate.SetHeight(3)
 	delegate.Styles.DimmedTitle = delegate.Styles.DimmedTitle.
 		Foreground(palette.Muted)
 	delegate.Styles.DimmedDesc = delegate.Styles.DimmedDesc.

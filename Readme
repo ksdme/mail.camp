@@ -5,13 +5,14 @@
 Pending
 - Support timeout
 - Remove references to ssh.camp host
-- Update app descriptions
 - Reading consent doesn't echo in interactive mode
+- Add simple explanation of all the commands (maybe on the menu page)
 
 Done
 - Menu
 - Help
 - Asking for consent is useless in non interactive mode
+- Update app descriptions
 
 #### Accounts
 

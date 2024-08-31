@@ -21,7 +21,7 @@ type App struct {
 }
 
 func (a *App) Info() (string, string, string) {
-	return "accounts", "Accounts", "Accounts"
+	return "accounts", "Accounts", "Manage your account."
 }
 
 func (a *App) Init() {

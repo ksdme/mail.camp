@@ -28,7 +28,8 @@ type App struct {
 }
 
 func (a *App) Info() (string, string, string) {
-	return "clipboard", "Clipboard", "Clipboard"
+	description := "Share text between machines or sessions."
+	return "clipboard", "Clipboard", description
 }
 
 func (a *App) Init() {
