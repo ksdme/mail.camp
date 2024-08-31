@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/charmbracelet/ssh"
 	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/config"
@@ -42,7 +41,6 @@ func CreateClipboardItem(
 	ctx context.Context,
 	db *bun.DB,
 	value []byte,
-	key ssh.PublicKey,
 	account accounts.Account,
 ) error {
 	slog.Debug("creating clipboard item", "account", account.ID)
@@ -55,7 +53,7 @@ func CreateClipboardItem(
 	}
 
 	// Generate the cipher.
-	aes, err := makeAESCipher(key)
+	aes, err := makeAESCipher()
 	if err != nil {
 		return err
 	}
@@ -96,7 +94,6 @@ type DecodedClipboardItem struct {
 func GetClipboardValue(
 	ctx context.Context,
 	db *bun.DB,
-	key ssh.PublicKey,
 	account accounts.Account,
 ) (*DecodedClipboardItem, error) {
 	// Find the item.
@@ -115,7 +112,7 @@ func GetClipboardValue(
 	}
 
 	// Generate cipher.
-	aes, err := makeAESCipher(key)
+	aes, err := makeAESCipher()
 	if err != nil {
 		return nil, nil
 	}
@@ -161,10 +158,9 @@ func CleanUp(ctx context.Context, db *bun.DB) error {
 	return err
 }
 
-func makeAESCipher(key ssh.PublicKey) (cipher.Block, error) {
-	basis := append(key.Marshal(), []byte(config.Core.Entropy)...)
+func makeAESCipher() (cipher.Block, error) {
 	hash := sha256.New()
-	if _, err := hash.Write(basis); err != nil {
+	if _, err := hash.Write([]byte(config.Core.Entropy)); err != nil {
 		return nil, errors.Wrap(err, "could not hash key")
 	}
 

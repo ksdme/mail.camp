@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/ssh"
 	accounts "github.com/ksdme/mail/internal/apps/accounts/models"
 	"github.com/ksdme/mail/internal/apps/clipboard/events"
 	"github.com/ksdme/mail/internal/apps/clipboard/models"
@@ -29,7 +28,6 @@ type clipboardRealtimeUpdate struct{}
 type Model struct {
 	db      *bun.DB
 	account accounts.Account
-	key     ssh.PublicKey
 
 	item *models.DecodedClipboardItem
 
@@ -47,7 +45,6 @@ type Model struct {
 func NewModel(
 	db *bun.DB,
 	account accounts.Account,
-	key ssh.PublicKey,
 	renderer *lipgloss.Renderer,
 	palette colors.ColorPalette,
 	quit tea.Cmd,
@@ -55,7 +52,6 @@ func NewModel(
 	return Model{
 		db:      db,
 		account: account,
-		key:     key,
 
 		item: nil,
 
@@ -239,7 +235,7 @@ func (m Model) listenToClipboardUpdate() tea.Msg {
 
 func (m Model) loadClipboard() tea.Msg {
 	// TODO: Handler error.
-	item, err := models.GetClipboardValue(context.TODO(), m.db, m.key, m.account)
+	item, err := models.GetClipboardValue(context.TODO(), m.db, m.account)
 	if err != sql.ErrNoRows {
 		slog.Error("could not get clipboard value", "err", err)
 	}

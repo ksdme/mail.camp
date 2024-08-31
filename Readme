@@ -7,6 +7,7 @@ Pending
 - Remove references to ssh.camp host
 - Update app descriptions
 - Reading consent doesn't echo
+- Asking for consent is useless in non interactive mode
 
 Done
 - Menu
@@ -15,8 +16,6 @@ Done
 #### Accounts
 
 Pending
-- Temporary login
-- Clipboard cannot use the PublicKey for encrypting anymore
 - Add read-only TUI
 - Add TUI
 - Rename command to account
@@ -29,6 +28,8 @@ Done
 - Prevent creating account with adding a fingerprint
 - Do not magically create accounts, ask first
 - Support deleting account
+- Temporary login
+- Clipboard cannot use the PublicKey for encrypting anymore
 
 #### Clipboard
 

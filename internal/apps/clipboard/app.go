@@ -64,7 +64,6 @@ func (a *App) HandleRequest(
 			utils.RunTeaInSession(next, session, tui.NewModel(
 				a.DB,
 				account,
-				session.PublicKey(),
 				renderer,
 				palette,
 				tea.Quit,
@@ -97,13 +96,7 @@ func (a *App) HandleRequest(
 		}
 
 		// Save the value.
-		err = models.CreateClipboardItem(
-			session.Context(),
-			a.DB,
-			value,
-			session.PublicKey(),
-			account,
-		)
+		err = models.CreateClipboardItem(session.Context(), a.DB, value, account)
 		if err != nil {
 			return 1, errors.Wrap(err, "could not put on the clipboard")
 		}
@@ -119,7 +112,7 @@ func (a *App) HandleRequest(
 		return 0, nil
 
 	default:
-		item, err := models.GetClipboardValue(session.Context(), a.DB, session.PublicKey(), account)
+		item, err := models.GetClipboardValue(session.Context(), a.DB, account)
 		if err != nil {
 			return 1, errors.Wrap(err, "could not fetch the clipboard")
 		}
@@ -149,7 +142,6 @@ func (a *App) HandleApp(
 	model := tui.NewModel(
 		a.DB,
 		account,
-		session.PublicKey(),
 		renderer,
 		palette,
 		quit,
