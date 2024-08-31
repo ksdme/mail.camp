@@ -6,7 +6,7 @@ Pending
 - Support timeout
 - Remove references to ssh.camp host
 - Update app descriptions
-- Reading consent doesn't echo
+- Reading consent doesn't echo in interactive mode
 - Asking for consent is useless in non interactive mode
 
 Done
@@ -16,8 +16,8 @@ Done
 #### Accounts
 
 Pending
-- Add read-only TUI
 - Add TUI
+- Add read-only TUI
 - Rename command to account
 
 Done
