@@ -181,11 +181,21 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 					}
 				}
 
+				_, _, interactive := s.Pty()
 				if account == nil {
+					if !interactive {
+						fmt.Fprintln(
+							s,
+							"could not find an account with your username or public key: "+
+								"try interactive mode to create one",
+						)
+						s.Exit(1)
+						return
+					}
+
 					create := utils.AskConsent(
 						s,
-						"We could not find an account with your username or "+
-							"public key on ssh.camp.\n"+
+						"We could not find an account with your username or public key.\n"+
 							"Would you like to create one? (yes/no) ",
 					)
 					if !create {
@@ -244,11 +254,11 @@ func handleIncoming(enabledApps []core.App) wish.Middleware {
 			account := s.Context().Value("account").(accountmodels.Account)
 			stderr := s.Stderr()
 
-			pty, _, active := s.Pty()
+			pty, _, interactive := s.Pty()
 			renderer := bubbletea.MakeRenderer(s)
 			slog.Info(
 				"client configured with",
-				"active", active,
+				"interactive", interactive,
 				"term", pty.Term,
 				"has-dark-background", renderer.HasDarkBackground(),
 			)
@@ -318,9 +328,23 @@ func handleIncoming(enabledApps []core.App) wish.Middleware {
 				return
 			}
 
-			if retcode, err := app.HandleRequest(next, s, args, account, active, renderer, palette); err != nil {
-				slog.Error("could not process the request", "app", "n", "account", account.ID, "err", err, "args", command)
-
+			retcode, err := app.HandleRequest(
+				next,
+				s,
+				args,
+				account,
+				interactive,
+				renderer,
+				palette,
+			)
+			if err != nil {
+				slog.Error(
+					"could not process the request",
+					"app", name,
+					"account", account.ID,
+					"err", err,
+					"args", command,
+				)
 				err = errors.Wrap(err, "could not process your request")
 				fmt.Fprintln(stderr, err.Error())
 

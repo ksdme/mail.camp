@@ -7,11 +7,11 @@ Pending
 - Remove references to ssh.camp host
 - Update app descriptions
 - Reading consent doesn't echo in interactive mode
-- Asking for consent is useless in non interactive mode
 
 Done
 - Menu
 - Help
+- Asking for consent is useless in non interactive mode
 
 #### Accounts
 
