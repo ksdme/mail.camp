@@ -19,7 +19,6 @@ type Mail struct {
 	Seen      bool
 	Important bool
 
-	// TODO: We need to setup cascade relationship.
 	MailboxID int64    `bun:",notnull"`
 	Mailbox   *Mailbox `bun:"rel:belongs-to,join:mailbox_id=id,on_delete:cascade"`
 

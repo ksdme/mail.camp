@@ -2,7 +2,9 @@ package models
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -27,7 +29,20 @@ type Key struct {
 	ID          int64  `bun:",pk,autoincrement"`
 	Fingerprint string `bun:",notnull,unique"`
 
-	// TODO: We need to setup cascade relationship.
+	AccountID int64    `bun:",notnull"`
+	Account   *Account `bun:"rel:belongs-to,join:account_id=id,on_delete:cascade"`
+
+	CreatedAt time.Time `bun:",nullzero,notnull,default:current_timestamp"`
+}
+
+// We support logging in using a token.
+type Token struct {
+	ID int64 `bun:",pk,autoincrement"`
+
+	Name    string `bun:",notnull"`
+	Token   string `bun:",notnull,unique"`
+	Expires time.Time
+
 	AccountID int64    `bun:",notnull"`
 	Account   *Account `bun:"rel:belongs-to,join:account_id=id,on_delete:cascade"`
 
@@ -146,6 +161,61 @@ func (a *Account) ListKeys(ctx context.Context, db *bun.DB) ([]Key, error) {
 	return keys, nil
 }
 
+// Returns a list of all login tokens on the account.
+func (a *Account) ListTokens(ctx context.Context, db *bun.DB) ([]Token, error) {
+	var tokens []Token
+	err := db.
+		NewSelect().
+		Model(&tokens).
+		Where("account_id = ?", a.ID).
+		Order("created_at ASC").
+		Scan(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not query tokens")
+	}
+	return tokens, nil
+}
+
+// Generate a keyless login token.
+func (a *Account) IssueToken(ctx context.Context, db *bun.DB, expires time.Time) (*Token, error) {
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, errors.Wrap(err, "could not generate random token")
+	}
+
+	// TODO: The user should be able to configure a name.
+	token := Token{
+		AccountID: a.ID,
+		Name:      hex.EncodeToString(nonce[:3]),
+		Token:     hex.EncodeToString(nonce),
+		Expires:   expires,
+	}
+	if _, err := db.NewInsert().Model(&token).Exec(ctx); err != nil {
+		return nil, errors.Wrap(err, "could not save token")
+	}
+
+	return &token, nil
+}
+
+// Remove a keyless login token and returns the number of tokens deleted
+// along with any error that happens while processing the deletion.
+func (a *Account) RemoveToken(ctx context.Context, db *bun.DB, name string) (int, error) {
+	r, err := db.
+		NewDelete().
+		Model(&Token{}).
+		Where("account_id = ?", a.ID).
+		Where("name = ? OR token LIKE ?", name, name+"%").
+		Exec(ctx)
+	if err != nil {
+		return -1, errors.Wrap(err, "could not query tokens")
+	}
+	if affected, err := r.RowsAffected(); err != nil {
+		return -1, nil
+	} else {
+		return int(affected), nil
+	}
+}
+
 // Delete the account and all the associated resources.
 func (a *Account) Delete(ctx context.Context, db *bun.DB) error {
 	// Other related resources share a cascading delete relationship
@@ -161,8 +231,8 @@ func (a *Account) Delete(ctx context.Context, db *bun.DB) error {
 	return nil
 }
 
-// Find existing account.
-func GetAccount(
+// Find an account from the public key.
+func GetAccountFromKey(
 	ctx context.Context,
 	db *bun.DB,
 	key ssh.PublicKey,
@@ -177,6 +247,30 @@ func GetAccount(
 		Join("JOIN keys as key").
 		JoinOn("key.account_id = account.id").
 		Where("key.fingerprint = ?", fingerprint).
+		Scan(ctx)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, errors.Wrap(err, "could not query accounts")
+	}
+
+	return &account, nil
+}
+
+// Find an account from the token.
+func GetAccountFromToken(
+	ctx context.Context,
+	db *bun.DB,
+	token string,
+) (*Account, error) {
+	var account Account
+	err := db.
+		NewSelect().
+		Model(&account).
+		Join("JOIN tokens as token").
+		JoinOn("token.account_id = account.id").
+		Where("token.token = ?", token).
 		Scan(ctx)
 	if err != nil {
 		if err == sql.ErrNoRows {

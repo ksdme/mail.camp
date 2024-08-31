@@ -59,17 +59,16 @@ func (a *App) HandleRequest(
 
 		lines := []string{}
 		for _, key := range keys {
-			lines = append(
-				lines,
-				fmt.Sprintf(
-					"%s %s",
-					key.CreatedAt.Format(time.DateTime),
-					key.Fingerprint,
-				),
-			)
+			lines = append(lines, fmt.Sprintf(
+				"%s %s",
+				key.CreatedAt.Format(time.DateTime),
+				key.Fingerprint,
+			))
 		}
 
-		fmt.Fprintln(session, strings.Join(lines, "\n"))
+		if len(lines) > 0 {
+			fmt.Fprintln(session, strings.Join(lines, "\n"))
+		}
 		return 0, nil
 
 	case args.Accounts.DeleteAccount != nil:
@@ -86,6 +85,62 @@ func (a *App) HandleRequest(
 		if err != nil {
 			return 1, errors.Wrap(err, "could not delete account")
 		}
+
+	case args.Accounts.ListTokens != nil:
+		tokens, err := account.ListTokens(session.Context(), a.DB)
+		if err != nil {
+			return 1, errors.Wrap(err, "could not list tokens")
+		}
+
+		lines := []string{}
+		for _, token := range tokens {
+			lines = append(lines, fmt.Sprintf(
+				"%s %s",
+				token.CreatedAt.Format(time.Stamp),
+				token.Name,
+			))
+		}
+
+		if len(lines) > 0 {
+			fmt.Fprintln(session, strings.Join(lines, "\n"))
+		}
+		return 0, nil
+
+	case args.Accounts.IssueToken != nil:
+		var zero time.Duration
+
+		expiry := time.Now().Add(3 * 24 * time.Hour)
+		if args.Accounts.IssueToken.Validity != zero {
+			expiry = time.Now().Add(args.Accounts.IssueToken.Validity)
+		}
+
+		token, err := account.IssueToken(session.Context(), a.DB, expiry)
+		if err != nil {
+			return 1, errors.Wrap(err, "could not issue token")
+		}
+
+		fmt.Fprintf(
+			session,
+			"%s\n\n"+
+				"You can use it to login with,\n"+
+				"ssh %s@ssh.camp\n",
+			token.Token,
+			token.Token,
+		)
+		return 0, nil
+
+	case args.Accounts.RemoveToken != nil:
+		affected, err := account.RemoveToken(session.Context(), a.DB, args.Accounts.RemoveToken.Name)
+		if err != nil {
+			return 1, errors.Wrap(err, "could not delete tokens")
+		}
+
+		if affected == -1 {
+			fmt.Fprintln(session, "unknown number of tokens deleted")
+		} else {
+			fmt.Fprintf(session, "%d token(s) deleted\n", affected)
+		}
+		return 0, nil
 
 	default:
 		return 1, fmt.Errorf("unknown operation")

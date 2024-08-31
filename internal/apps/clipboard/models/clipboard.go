@@ -31,7 +31,6 @@ type ClipboardItem struct {
 	IV    []byte `bun:",notnull"`
 	Value []byte `bun:",notnull"`
 
-	// TODO: We need to setup cascade relationship.
 	AccountID int64             `bun:",notnull,unique"`
 	Account   *accounts.Account `bun:"rel:belongs-to,join:account_id=id,on_delete:cascade"`
 

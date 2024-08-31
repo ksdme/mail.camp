@@ -7,6 +7,7 @@ import (
 	"log"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/ssh"
@@ -64,6 +65,13 @@ func main() {
 			db.
 				NewCreateTable().
 				Model(&accountmodels.Key{}).
+				WithForeignKeys().
+				Exec(ctx),
+		)
+		utils.MustExec(
+			db.
+				NewCreateTable().
+				Model(&accountmodels.Token{}).
 				WithForeignKeys().
 				Exec(ctx),
 		)
@@ -150,19 +158,34 @@ func startSSHServer(db *bun.DB, enabledApps []core.App) {
 		// Resolve the account.
 		func(next ssh.Handler) ssh.Handler {
 			return func(s ssh.Session) {
-				key := s.PublicKey()
-
-				account, err := accountmodels.GetAccount(s.Context(), db, key)
+				// We always receive a username even if the client doesn't explicitly
+				// mention it. So, we cannot complain if an account was not found.
+				account, err := accountmodels.GetAccountFromToken(
+					s.Context(),
+					db,
+					strings.TrimSpace(s.User()),
+				)
 				if err != nil {
 					fmt.Fprintln(s, err.Error())
 					s.Exit(1)
 					return
 				}
 
+				key := s.PublicKey()
+				if account == nil {
+					account, err = accountmodels.GetAccountFromKey(s.Context(), db, key)
+					if err != nil {
+						fmt.Fprintln(s, err.Error())
+						s.Exit(1)
+						return
+					}
+				}
+
 				if account == nil {
 					create := utils.AskConsent(
 						s,
-						"You do not have an account on ssh.camp.\n"+
+						"We could not find an account with your username or "+
+							"public key on ssh.camp.\n"+
 							"Would you like to create one? (yes/no) ",
 					)
 					if !create {

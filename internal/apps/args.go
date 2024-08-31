@@ -1,5 +1,7 @@
 package apps
 
+import "time"
+
 // For the sake of presenting a global help command, we aggregate all the
 // supported subcommands here.
 type AppArgs struct {
@@ -21,6 +23,7 @@ type AppArgs struct {
 
 	// Accounts application.
 	Accounts *struct {
+		// Keys
 		ListKeys *struct{} `arg:"subcommand:list-keys" help:"list all keys attached to the account"`
 
 		AddKey *struct {
@@ -31,6 +34,18 @@ type AppArgs struct {
 			Key string `arg:"positional,required" help:"SHA256 fingerprint of the key to remove"`
 		} `arg:"subcommand:remove-key" help:"add a key to your account"`
 
+		// Keyless login.
+		ListTokens *struct{} `arg:"subcommand:list-tokens" help:"list all previously issued keyless login tokens"`
+
+		IssueToken *struct {
+			Validity time.Duration `help:"duration of the token validity"`
+		} `arg:"subcommand:issue-token" help:"issue a new token for keyless login"`
+
+		RemoveToken *struct {
+			Name string `arg:"positional,required"`
+		} `arg:"subcommand:remove-token" help:"remove a previously issued keyless login token"`
+
+		// Account.
 		DeleteAccount *struct{} `arg:"subcommand:delete-account" help:"delete the current account"`
 	} `arg:"subcommand:accounts" help:"manage your account"`
 }
